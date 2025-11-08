@@ -1,0 +1,37 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PlatformLandMessage = ReplicatedStorage:WaitForChild("PlatformLandMessage")
+local MessageConfig = require(ReplicatedStorage:WaitForChild("PlatformLandMessageConfig"))
+
+local StarterGui = game:GetService("StarterGui")
+
+PlatformLandMessage.OnClientEvent:Connect(function(messageType)
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "PlatformLandMessageUI"
+    screenGui.ResetOnSpawn = false
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.AnchorPoint = Vector2.new(0.5, 1)
+    textLabel.Position = UDim2.new(0.5, 0, 1, -200)
+    textLabel.Size = UDim2.new(0, 300, 0, 60)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.TextSize = 48
+    textLabel.TextStrokeTransparency = 0.5
+    textLabel.TextStrokeColor3 = Color3.new(0,0,0)
+    textLabel.TextTransparency = 0
+    textLabel.Parent = screenGui
+
+    if messageType == "PREFECT" then
+        textLabel.Text = "PREFECT"
+        textLabel.TextColor3 = MessageConfig.PrefectColor
+    else
+        textLabel.Text = "GREAT"
+        textLabel.TextColor3 = MessageConfig.GreatColor
+    end
+
+    screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+    task.wait(1)
+    screenGui:Destroy()
+end)
+

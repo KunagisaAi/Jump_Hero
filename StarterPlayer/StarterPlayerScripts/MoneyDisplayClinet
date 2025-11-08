@@ -1,0 +1,107 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+
+local REMOTE_EVENT = ReplicatedStorage:WaitForChild("AwardMoney")
+local player = Players.LocalPlayer
+
+local money = 0
+
+-- 创建左上角UI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "MoneyDisplay"
+screenGui.ResetOnSpawn = false
+
+-- 创建一个容器Frame来更好地管理布局
+local container = Instance.new("Frame")
+container.Name = "Container"
+container.Size = UDim2.new(0, 300, 0, 180) -- 增加宽度以容纳更多数字
+container.Position = UDim2.new(0, 10, 0, 10)
+container.BackgroundTransparency = 1
+container.Parent = screenGui
+
+-- 金币UI部分
+local goldContainer = Instance.new("Frame")
+goldContainer.Name = "GoldContainer"
+goldContainer.Size = UDim2.new(1, 0, 0, 50)
+goldContainer.Position = UDim2.new(0, 0, 0, 0)
+goldContainer.BackgroundTransparency = 1
+goldContainer.Parent = container
+
+-- 金币图标（固定位置）
+local goldIcon = Instance.new("ImageLabel")
+goldIcon.Name = "GoldIcon"
+goldIcon.Size = UDim2.new(0, 64, 0, 64)
+goldIcon.Position = UDim2.new(0, 0, 0, 0) -- 调整位置使其居中
+goldIcon.AnchorPoint = Vector2.new(0, 0) -- 固定在左侧
+goldIcon.BackgroundTransparency = 1
+goldIcon.Image = "rbxassetid://1039053630"
+goldIcon.Parent = goldContainer
+
+-- 金币显示文本（固定在图标右侧）
+local moneyLabel = Instance.new("TextLabel")
+moneyLabel.Name = "MoneyLabel"
+moneyLabel.Size = UDim2.new(1, -70, 1, 0) -- 从图标右侧开始，留出70像素空间
+moneyLabel.Position = UDim2.new(0, 77, 0, 7) -- 从图标右侧开始
+moneyLabel.AnchorPoint = Vector2.new(0, 0) -- 固定在图标右侧
+moneyLabel.BackgroundTransparency = 1
+moneyLabel.TextColor3 = Color3.new(0, 1, 0)
+moneyLabel.Font = Enum.Font.SourceSansBold
+moneyLabel.TextSize = 32
+moneyLabel.TextXAlignment = Enum.TextXAlignment.Left -- 文本左对齐，向右扩展
+moneyLabel.Text = "金钱: 0"
+moneyLabel.Parent = goldContainer
+
+-- Robox货币显示
+local roboxBalance = 0
+
+-- Robox UI部分
+local roboxContainer = Instance.new("Frame")
+roboxContainer.Name = "RoboxContainer"
+roboxContainer.Size = UDim2.new(1, 0, 0, 50)
+roboxContainer.Position = UDim2.new(0, 0, 0, 60)
+roboxContainer.BackgroundTransparency = 1
+roboxContainer.Parent = container
+
+-- Robox图标（固定位置）
+local roboxIcon = Instance.new("ImageLabel")
+roboxIcon.Name = "RoboxIcon"
+roboxIcon.Size = UDim2.new(0, 64, 0, 64)
+roboxIcon.Position = UDim2.new(0, 0, 0, 14) -- 调整位置使其居中
+roboxIcon.AnchorPoint = Vector2.new(0, 0) -- 固定在左侧
+roboxIcon.BackgroundTransparency = 1
+roboxIcon.Image = "rbxassetid://11560341824"
+roboxIcon.Parent = roboxContainer
+
+-- Robox显示文本（固定在图标右侧）
+local roboxLabel = Instance.new("TextLabel")
+roboxLabel.Name = "RoboxLabel"
+roboxLabel.Size = UDim2.new(1, -70, 1, 0) -- 从图标右侧开始，留出70像素空间
+roboxLabel.Position = UDim2.new(0, 77, 0, 21) -- 从图标右侧开始
+roboxLabel.AnchorPoint = Vector2.new(0, 0) -- 固定在图标右侧
+roboxLabel.BackgroundTransparency = 1
+roboxLabel.TextColor3 = Color3.new(1, 0.666667, 0)
+roboxLabel.Font = Enum.Font.SourceSansBold
+roboxLabel.TextSize = 32
+roboxLabel.TextXAlignment = Enum.TextXAlignment.Left -- 文本左对齐，向右扩展
+roboxLabel.Text = "Robox: 0"
+roboxLabel.Parent = roboxContainer
+
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local function updateMoney(amount)
+	money = money + amount
+	if money < 0 then money = 0 end
+	moneyLabel.Text = "金钱: " .. money
+end
+
+-- Robox充值函数
+local function addRobox(amount)
+	roboxBalance = roboxBalance + amount
+	if roboxBalance < 0 then roboxBalance = 0 end
+	roboxLabel.Text = "Robox: " .. roboxBalance
+end
+
+REMOTE_EVENT.OnClientEvent:Connect(function(amount)
+	updateMoney(amount)
+end)

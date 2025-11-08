@@ -1,0 +1,28 @@
+local ContextActionService = game:GetService("ContextActionService")
+local Players = game:GetService("Players")
+
+-- 禁用所有默认跳跃相关动作
+local function blockJump(actionName, inputState, inputObject)
+    return Enum.ContextActionResult.Sink
+end
+
+-- 覆盖所有跳跃相关动作名
+ContextActionService:BindAction("JumpAction", blockJump, false, Enum.KeyCode.Space)
+ContextActionService:BindAction("jump", blockJump, false, Enum.KeyCode.Space)
+
+-- 禁用移动端跳跃按钮
+ContextActionService:SetJumpButtonEnabled(false)
+
+-- 防止角色重生后跳跃按钮恢复
+local function onCharacterAdded(character)
+    ContextActionService:SetJumpButtonEnabled(false)
+end
+
+local localPlayer = Players.LocalPlayer
+if localPlayer then
+    localPlayer.CharacterAdded:Connect(onCharacterAdded)
+    if localPlayer.Character then
+        onCharacterAdded(localPlayer.Character)
+    end
+end
+

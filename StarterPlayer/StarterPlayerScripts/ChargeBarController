@@ -1,0 +1,44 @@
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
+
+-- 获取 JumpUI 和 ChargeBar
+local function getChargeBar()
+	local playerGui = localPlayer:WaitForChild("PlayerGui")
+	local jumpUI = playerGui:WaitForChild("JumpUI")
+	local chargeBar = jumpUI:WaitForChild("ChargeBar")
+	return chargeBar
+end
+
+-- 更新蓄力条显示（percent: 0~1）
+local function updateChargeBar(percent)
+	local chargeBar = getChargeBar()
+	percent = math.clamp(percent, 0, 1)
+
+	local fullWidth = chargeBar.Size.X.Offset
+	local newWidth = math.floor(fullWidth * percent)
+	chargeBar.Size = UDim2.new(0, newWidth, chargeBar.Size.Y.Scale, chargeBar.Size.Y.Offset)
+end
+
+-- 重置蓄力条
+local function resetChargeBar()
+	updateChargeBar(0)
+end
+
+-- 示例：监听蓄力值变化（需根据实际蓄力逻辑调用 updateChargeBar）
+-- 这里假设 chargeValue/maxCharge 得到百分比
+-- 可在你的蓄力逻辑中调用 updateChargeBar(percent)
+
+-- 初始化
+resetChargeBar()
+
+--[[
+-- 示例：假设每隔0.1秒蓄力增加
+local chargeValue = 0
+local maxCharge = 100
+for i = 1, maxCharge do
+    chargeValue = i
+    updateChargeBar(chargeValue / maxCharge)
+    task.wait(0.1)
+end
+--]]
+
