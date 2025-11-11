@@ -1,0 +1,60 @@
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+
+local ZOMBIE_IMAGE_ID = "rbxassetid://122269719475476"
+local processingBlocks = {} -- 防止重复处理
+
+-- 处理单个Block
+local function processBlock(block)
+	if processingBlocks[block] or block.Name ~= "Block" then
+		return
+	end
+
+	processingBlocks[block] = true
+	print("处理Block:", block.Name)
+
+	-- 查找或创建Decal
+	local decal = block:FindFirstChildOfClass("Decal")
+	if not decal then
+		decal = Instance.new("Decal")
+		decal.Face = "Top"
+		decal.Parent = block
+	end
+
+	decal.Texture = ZOMBIE_IMAGE_ID
+	block.Name = "Blocked"
+end
+
+-- 检测玩家触碰的部件是否为Block
+local function onPlayerTouched(hit, character)
+	-- 检查触碰的部件
+	if hit and hit:IsA("Part") and hit.Name == "Block" then
+		processBlock(hit)
+	end
+end
+
+-- 为每个玩家设置触碰检测
+local function setupPlayer(character)
+	local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+	humanoidRootPart.Touched:Connect(function(hit)
+		onPlayerTouched(hit, character)
+	end)
+end
+
+-- 玩家加入时设置
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(setupPlayer)
+	if player.Character then
+		setupPlayer(player.Character)
+	end
+end)
+
+-- 为已存在的玩家设置
+for _, player in ipairs(Players:GetPlayers()) do
+	if player.Character then
+		setupPlayer(player.Character)
+	end
+end
+
+print("按需Block检测系统已启动")
