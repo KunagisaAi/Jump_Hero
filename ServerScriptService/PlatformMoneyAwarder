@@ -1,60 +1,59 @@
 -- PlatformMoneyAwarder
 local REMOTE_EVENT = game:GetService("ReplicatedStorage"):WaitForChild("AwardMoney")
 local MESSAGE_EVENT = game:GetService("ReplicatedStorage"):WaitForChild("PlatformLandMessage")
-local PLATFORM_COLOR = Color3.fromRGB(54,165,71)
 local MessageConfig = require(game:GetService("ReplicatedStorage"):WaitForChild("PlatformLandMessageConfig"))
 
 local lastPreciseLand = {}
 
 local function calculateMoney(platform, rootPos)
-    local center = platform.Position
-    local dist = (Vector3.new(rootPos.X, center.Y, rootPos.Z) - Vector3.new(center.X, center.Y, center.Z)).Magnitude
-    -- 精准降落（距离中心<=7）给100金钱，否则50金钱
-    local money = 50
-    local isPrecise = false
-    if dist <= 7 then
-        money = 100
-        isPrecise = true
-    end
-    return money, isPrecise
+	local center = platform.Position
+	local dist = (Vector3.new(rootPos.X, center.Y, rootPos.Z) - Vector3.new(center.X, center.Y, center.Z)).Magnitude
+	-- 精准降落（距离中心<=7）给100金钱，否则50金钱
+	local money = 50
+	local isPrecise = false
+	if dist <= 7 then
+		money = 100
+		isPrecise = true
+	end
+	return money, isPrecise
 end
 
 local function onCharacterAdded(character, player)
-    character:WaitForChild("HumanoidRootPart")
-    local lastPlatform = nil
-    character.HumanoidRootPart.Touched:Connect(function(hit)
-        if hit:IsA("Part") and hit.Color == PLATFORM_COLOR then
-            -- 检查是否重复触发
-            if lastPlatform == hit then return end
-            lastPlatform = hit
-            local rootPos = character.HumanoidRootPart.Position
-            local money, isPrecise = calculateMoney(hit, rootPos)
-            -- 检查是否连续精准降落
-            if lastPreciseLand[player] and isPrecise then
-                money = money * 2
-            end
-            lastPreciseLand[player] = isPrecise
-            REMOTE_EVENT:FireClient(player, money)
+	character:WaitForChild("HumanoidRootPart")
+	local lastPlatform = nil
+	character.HumanoidRootPart.Touched:Connect(function(hit)
+		-- 修改这里：检测平台名字是否为"Block"
+		if hit:IsA("Part") and hit.Name == "Block" then
+			-- 检查是否重复触发
+			if lastPlatform == hit then return end
+			lastPlatform = hit
+			local rootPos = character.HumanoidRootPart.Position
+			local money, isPrecise = calculateMoney(hit, rootPos)
+			-- 检查是否连续精准降落
+			if lastPreciseLand[player] and isPrecise then
+				money = money * 2
+			end
+			lastPreciseLand[player] = isPrecise
+			REMOTE_EVENT:FireClient(player, money)
 
-            -- 弹窗消息
-            if isPrecise then
-                MESSAGE_EVENT:FireClient(player, "PREFECT")
-            else
-                MESSAGE_EVENT:FireClient(player, "GREAT")
-            end
-        end
-    end)
+			-- 弹窗消息
+			if isPrecise then
+				MESSAGE_EVENT:FireClient(player, "PREFECT")
+			else
+				MESSAGE_EVENT:FireClient(player, "GREAT")
+			end
+		end
+	end)
 end
 
 local Players = game:GetService("Players")
 Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function(character)
-        onCharacterAdded(character, player)
-    end)
+	player.CharacterAdded:Connect(function(character)
+		onCharacterAdded(character, player)
+	end)
 end)
 for _, player in Players:GetPlayers() do
-    player.CharacterAdded:Connect(function(character)
-        onCharacterAdded(character, player)
-    end)
+	player.CharacterAdded:Connect(function(character)
+		onCharacterAdded(character, player)
+	end)
 end
-
