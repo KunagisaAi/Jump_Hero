@@ -13,6 +13,9 @@ local function processBlock(block)
 	processingBlocks[block] = true
 	print("处理Block:", block.Name)
 
+	-- 延迟处理，确保金钱奖励判定先完成
+	task.wait(0.1) -- 等待0.1秒，确保金钱奖励脚本已完成处理
+
 	-- 查找或创建Decal
 	local decal = block:FindFirstChildOfClass("Decal")
 	if not decal then

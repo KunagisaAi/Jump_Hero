@@ -1,0 +1,48 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PlatformLandMessage = ReplicatedStorage:WaitForChild("PlatformLandMessage")
+
+PlatformLandMessage.OnClientEvent:Connect(function(messageType)
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "PlatformLandMessageUI"
+	screenGui.ResetOnSpawn = false
+
+	local imageLabel = Instance.new("ImageLabel")
+	imageLabel.AnchorPoint = Vector2.new(0.5, 1)
+	imageLabel.Position = UDim2.new(0.5, 0, 1, -200)
+	imageLabel.Size = UDim2.new(0, 300, 0, 150) -- 调整尺寸以适应图片
+	imageLabel.BackgroundTransparency = 1
+	imageLabel.ScaleType = Enum.ScaleType.Fit -- 保持图片比例
+	imageLabel.Parent = screenGui
+
+	-- 根据消息类型设置不同的图片
+	if messageType == "PERFECT" then
+		imageLabel.Image = "rbxassetid://111743689000728"
+	elseif messageType == "GREAT" then
+		imageLabel.Image = "rbxassetid://91491256507420"
+	elseif messageType == "GOOD" then
+		imageLabel.Image = "rbxassetid://71871337320235"
+	elseif messageType == "BAD" then
+		imageLabel.Image = "rbxassetid://117163375852005"
+	else
+		-- 未知消息类型，使用默认图片或保持透明
+		imageLabel.Image = ""
+	end
+
+	screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+	-- 可选：添加淡入淡出效果
+	imageLabel.ImageTransparency = 1
+	for i = 1, 10 do
+		imageLabel.ImageTransparency = imageLabel.ImageTransparency - 0.1
+		task.wait(0.05)
+	end
+
+	task.wait(0.5) -- 显示一段时间
+
+	for i = 1, 10 do
+		imageLabel.ImageTransparency = imageLabel.ImageTransparency + 0.1
+		task.wait(0.05)
+	end
+
+	screenGui:Destroy()
+end)

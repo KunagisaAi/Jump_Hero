@@ -7,41 +7,95 @@ local lastPreciseLand = {}
 
 local function calculateMoney(platform, rootPos)
 	local center = platform.Position
-	local dist = (Vector3.new(rootPos.X, center.Y, rootPos.Z) - Vector3.new(center.X, center.Y, center.Z)).Magnitude
-	-- 精准降落（距离中心<=7）给100金钱，否则50金钱
-	local money = 50
-	local isPrecise = false
-	if dist <= 7 then
-		money = 100
-		isPrecise = true
+
+	-- 尝试使用自定义中心点
+	local landingCenter = platform:FindFirstChild("LandingCenter")
+	if landingCenter and landingCenter:IsA("Attachment") then
+		center = landingCenter.WorldPosition
 	end
-	return money, isPrecise
+
+	-- 尝试获取自定义判定半径，如果没有则使用默认计算
+	local customRadius = platform:GetAttribute("LandingRadius")
+	local radius
+
+	if customRadius then
+		radius = customRadius
+	else
+		local platformSize = platform.Size
+		local shape = platform.Shape
+
+		-- 使用Y轴作为直径的平台类型
+		if shape == Enum.PartType.Ball or shape == Enum.PartType.Cylinder or shape == Enum.PartType.Wedge then
+			-- 球体、圆柱体和楔形（三角形）平台：使用Y轴作为直径
+			radius = platformSize.Y / 2
+		else
+			-- 其他平台（主要是方块）：使用X轴作为直径
+			radius = platformSize.X / 2
+		end
+	end
+
+	-- 计算距离
+	local dist
+	if platform.Shape == Enum.PartType.Ball then
+		dist = (rootPos - center).Magnitude -- 球形需要3D距离
+	else
+		dist = (Vector3.new(rootPos.X, center.Y, rootPos.Z) - Vector3.new(center.X, center.Y, center.Z)).Magnitude
+	end
+
+	-- 计算三分之一和三分之二半径
+	local oneThirdRadius = radius / 3
+	local twoThirdsRadius = radius * 2 / 3
+
+	local money = 25  -- 默认奖励
+	local message = "GOOD"
+	local isPrecise = false
+
+	if dist <= oneThirdRadius then
+		-- 精准降落：距离中心 <= 1/3半径
+		money = 100
+		message = "PERFECT"
+		isPrecise = true
+	elseif dist <= twoThirdsRadius then
+		-- 良好降落：距离中心 <= 2/3半径
+		money = 50
+		message = "GREAT"
+	else
+		-- 普通降落：在平台上但距离中心 > 2/3半径
+		money = 25
+		message = "GOOD"
+	end
+
+	return money, message, isPrecise
 end
 
 local function onCharacterAdded(character, player)
 	character:WaitForChild("HumanoidRootPart")
 	local lastPlatform = nil
+
 	character.HumanoidRootPart.Touched:Connect(function(hit)
-		-- 修改这里：检测平台名字是否为"Block"
+		-- 处理Block平台
 		if hit:IsA("Part") and hit.Name == "Block" then
-			-- 检查是否重复触发
+			-- 检查是否重复触发（Baseplate不需要此检查）
 			if lastPlatform == hit then return end
 			lastPlatform = hit
+
 			local rootPos = character.HumanoidRootPart.Position
-			local money, isPrecise = calculateMoney(hit, rootPos)
-			-- 检查是否连续精准降落
+			local money, message, isPrecise = calculateMoney(hit, rootPos)
+
+			-- 检查是否连续精准降落（仅对Block平台）
 			if lastPreciseLand[player] and isPrecise then
 				money = money * 2
 			end
 			lastPreciseLand[player] = isPrecise
-			REMOTE_EVENT:FireClient(player, money)
 
-			-- 弹窗消息
-			if isPrecise then
-				MESSAGE_EVENT:FireClient(player, "PREFECT")
-			else
-				MESSAGE_EVENT:FireClient(player, "GREAT")
-			end
+			REMOTE_EVENT:FireClient(player, money)
+			MESSAGE_EVENT:FireClient(player, message)
+
+			-- 处理Baseplate平台
+		elseif hit:IsA("Part") and hit.Name == "Baseplate" then
+			-- Baseplate可以重复触发，不检查lastPlatform
+			MESSAGE_EVENT:FireClient(player, "BAD")
+			-- Baseplate不给金钱奖励
 		end
 	end)
 end
