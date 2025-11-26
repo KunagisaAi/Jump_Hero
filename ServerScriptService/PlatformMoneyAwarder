@@ -22,21 +22,31 @@ local function calculateMoney(platform, rootPos)
 		radius = customRadius
 	else
 		local platformSize = platform.Size
-		local shape = platform.Shape
 
-		-- 使用Y轴作为直径的平台类型
-		if shape == Enum.PartType.Ball or shape == Enum.PartType.Cylinder or shape == Enum.PartType.Wedge then
-			-- 球体、圆柱体和楔形（三角形）平台：使用Y轴作为直径
-			radius = platformSize.Y / 2
+		-- UnionOperation没有Shape属性，所以需要特殊处理
+		if platform:IsA("UnionOperation") then
+			-- 对于UnionOperation，使用X和Z方向的最大值作为直径
+			radius = math.max(platformSize.X, platformSize.Z) / 2
 		else
-			-- 其他平台（主要是方块）：使用X轴作为直径
-			radius = platformSize.X / 2
+			local shape = platform.Shape
+
+			-- 使用Y轴作为直径的平台类型
+			if shape == Enum.PartType.Ball or shape == Enum.PartType.Cylinder or shape == Enum.PartType.Wedge then
+				-- 球体、圆柱体和楔形（三角形）平台：使用Y轴作为直径
+				radius = platformSize.Y / 2
+			else
+				-- 其他平台（主要是方块）：使用X轴作为直径
+				radius = platformSize.X / 2
+			end
 		end
 	end
 
 	-- 计算距离
 	local dist
-	if platform.Shape == Enum.PartType.Ball then
+	if platform:IsA("UnionOperation") then
+		-- UnionOperation使用2D距离（忽略Y轴）
+		dist = (Vector3.new(rootPos.X, center.Y, rootPos.Z) - Vector3.new(center.X, center.Y, center.Z)).Magnitude
+	elseif platform.Shape == Enum.PartType.Ball then
 		dist = (rootPos - center).Magnitude -- 球形需要3D距离
 	else
 		dist = (Vector3.new(rootPos.X, center.Y, rootPos.Z) - Vector3.new(center.X, center.Y, center.Z)).Magnitude
@@ -73,8 +83,8 @@ local function onCharacterAdded(character, player)
 	local lastPlatform = nil
 
 	character.HumanoidRootPart.Touched:Connect(function(hit)
-		-- 处理Block平台
-		if hit:IsA("Part") and hit.Name == "Block" then
+		-- 处理Block平台（包括Part和UnionOperation）
+		if (hit:IsA("Part") or hit:IsA("UnionOperation")) and hit.Name == "Block" then
 			-- 检查是否重复触发（Baseplate不需要此检查）
 			if lastPlatform == hit then return end
 			lastPlatform = hit
@@ -91,8 +101,8 @@ local function onCharacterAdded(character, player)
 			REMOTE_EVENT:FireClient(player, money)
 			MESSAGE_EVENT:FireClient(player, message)
 
-			-- 处理Baseplate平台
-		elseif hit:IsA("Part") and hit.Name == "Baseplate" then
+			-- 处理Baseplate平台（包括Part和UnionOperation）
+		elseif (hit:IsA("Part") or hit:IsA("UnionOperation")) and hit.Name == "Baseplate" then
 			-- Baseplate可以重复触发，不检查lastPlatform
 			MESSAGE_EVENT:FireClient(player, "BAD")
 			-- Baseplate不给金钱奖励

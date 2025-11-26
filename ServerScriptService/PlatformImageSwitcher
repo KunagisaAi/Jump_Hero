@@ -30,8 +30,8 @@ end
 
 -- 检测玩家触碰的部件是否为Block
 local function onPlayerTouched(hit, character)
-	-- 检查触碰的部件
-	if hit and hit:IsA("Part") and hit.Name == "Block" then
+	-- 检查触碰的部件（包括Part和UnionOperation）
+	if hit and (hit:IsA("Part") or hit:IsA("UnionOperation")) and hit.Name == "Block" then
 		processBlock(hit)
 	end
 end
