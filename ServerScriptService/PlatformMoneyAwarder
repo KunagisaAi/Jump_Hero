@@ -25,8 +25,17 @@ local function calculateMoney(platform, rootPos)
 
 		-- UnionOperation没有Shape属性，所以需要特殊处理
 		if platform:IsA("UnionOperation") then
-			-- 对于UnionOperation，使用X和Z方向的最大值作为直径
-			radius = math.max(platformSize.X, platformSize.Z) / 2
+			-- 检查是否是三角形UnionOperation
+			local isTriangle = platform:GetAttribute("IsTriangle") or 
+				string.find(string.lower(platform.Name), "triangle") ~= nil
+
+			if isTriangle then
+				-- 三角形UnionOperation：使用Y轴作为直径
+				radius = platformSize.Y / 2
+			else
+				-- 其他UnionOperation：使用X和Z方向的最大值作为直径
+				radius = math.max(platformSize.X, platformSize.Z) / 2
+			end
 		else
 			local shape = platform.Shape
 
