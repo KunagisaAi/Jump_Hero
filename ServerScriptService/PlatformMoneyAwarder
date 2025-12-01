@@ -1,9 +1,10 @@
 -- PlatformMoneyAwarder
 local REMOTE_EVENT = game:GetService("ReplicatedStorage"):WaitForChild("AwardMoney")
 local MESSAGE_EVENT = game:GetService("ReplicatedStorage"):WaitForChild("PlatformLandMessage")
-local MessageConfig = require(game:GetService("ReplicatedStorage"):WaitForChild("PlatformLandMessageConfig"))
 
 local lastPreciseLand = {}
+-- 新增：记录每个玩家已经触发过的平台
+local playerTriggeredPlatforms = {}
 
 local function calculateMoney(platform, rootPos)
 	local center = platform.Position
@@ -98,6 +99,19 @@ local function onCharacterAdded(character, player)
 			if lastPlatform == hit then return end
 			lastPlatform = hit
 
+			-- 检查这个平台是否已经被该玩家触发过
+			if not playerTriggeredPlatforms[player] then
+				playerTriggeredPlatforms[player] = {}
+			end
+
+			-- 使用平台实例作为键，避免重复触发
+			if playerTriggeredPlatforms[player][hit] then
+				return -- 这个平台已经被触发过，不再触发
+			end
+
+			-- 标记这个平台为已触发
+			playerTriggeredPlatforms[player][hit] = true
+
 			local rootPos = character.HumanoidRootPart.Position
 			local money, message, isPrecise = calculateMoney(hit, rootPos)
 
@@ -120,13 +134,36 @@ local function onCharacterAdded(character, player)
 end
 
 local Players = game:GetService("Players")
+
+-- 玩家离开游戏时清理记录
+local function onPlayerRemoving(player)
+	playerTriggeredPlatforms[player] = nil
+	lastPreciseLand[player] = nil
+end
+
 Players.PlayerAdded:Connect(function(player)
+	-- 初始化玩家的触发记录
+	playerTriggeredPlatforms[player] = {}
+
 	player.CharacterAdded:Connect(function(character)
 		onCharacterAdded(character, player)
 	end)
+
+	-- 监听玩家离开
+	player:GetPropertyChangedSignal("Parent"):Connect(function()
+		if not player.Parent then
+			onPlayerRemoving(player)
+		end
+	end)
 end)
+
+-- 为已存在的玩家设置
 for _, player in Players:GetPlayers() do
+	playerTriggeredPlatforms[player] = {}
 	player.CharacterAdded:Connect(function(character)
 		onCharacterAdded(character, player)
 	end)
 end
+
+-- 监听玩家离开
+Players.PlayerRemoving:Connect(onPlayerRemoving)

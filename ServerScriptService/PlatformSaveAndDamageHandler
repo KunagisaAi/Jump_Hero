@@ -1,0 +1,111 @@
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+
+-- 保存玩家的出生点（平台实例或默认出生点）
+local playerSpawnPoints = {}
+
+-- 默认出生点（Workspace下的SpawnLocation）
+local defaultSpawnLocation = Workspace:FindFirstChild("SpawnLocation")
+
+-- 无敌冷却表
+local invinciblePlayers = {}
+
+-- 获取平台上方的位置
+local function getAboveCFrame(part)
+	local cframe = part:GetPivot()
+	local offset = Vector3.new(0, 5, 0)
+	return cframe + offset
+end
+
+-- 获取玩家出生点（优先SavePoint，否则默认SpawnLocation）
+local function getPlayerSpawnPart(player)
+	local spawnPart = playerSpawnPoints[player]
+	if spawnPart and spawnPart:IsDescendantOf(Workspace) then
+		return spawnPart
+	end
+	return defaultSpawnLocation
+end
+
+local function teleportToSpawn(player)
+	local character = player.Character
+	if not character then return end
+	local spawnPart = getPlayerSpawnPart(player)
+	if spawnPart then
+		local aboveCFrame = getAboveCFrame(spawnPart)
+		character:PivotTo(aboveCFrame)
+	end
+end
+
+local function onTouched(player, hit)
+	if not hit or not hit:IsA("BasePart") then
+		return
+	end
+
+	local character = player.Character
+	if not character then return end
+
+	local humanoid = character:FindFirstChild("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then return end
+
+	-- SavePoint逻辑
+	if hit.Name == "SavePoint" then
+		playerSpawnPoints[player] = hit
+		return
+	end
+
+	-- Baseplate逻辑
+	if hit.Name == "Baseplate" then
+		-- 无敌冷却
+		if invinciblePlayers[player] then return end
+		invinciblePlayers[player] = true
+
+		-- 造成伤害
+		humanoid.Health = math.max(humanoid.Health - 40, 0)
+
+		-- 检查是否死亡
+		if humanoid.Health > 0 then
+			teleportToSpawn(player)
+		end
+
+		-- 1秒无敌
+		task.delay(1, function()
+			invinciblePlayers[player] = nil
+		end)
+	end
+end
+
+local function setupCharacter(player, character)
+	local humanoid = character:FindFirstChild("Humanoid")
+	if not humanoid then return end
+
+	-- 绑定触碰事件
+	for i, part in character:GetChildren() do
+		if part:IsA("BasePart") then
+			part.Touched:Connect(function(hit)
+				onTouched(player, hit)
+			end)
+		end
+	end
+
+	-- 绑定死亡事件，重生后传送到出生点
+	humanoid.Died:Connect(function()
+		-- 玩家死亡时不传送
+		-- 等待角色重生
+		player.CharacterAdded:Wait()
+		task.wait(0.1)
+		teleportToSpawn(player)
+	end)
+end
+
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function(character)
+		setupCharacter(player, character)
+	end)
+end)
+
+for i, player in Players:GetPlayers() do
+	if player.Character then
+		setupCharacter(player, player.Character)
+	end
+end
+
