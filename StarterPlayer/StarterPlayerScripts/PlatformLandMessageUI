@@ -1,112 +1,78 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PlatformLandMessage = ReplicatedStorage:WaitForChild("PlatformLandMessage")
+local ContentProvider = game:GetService("ContentProvider")
+local TweenService = game:GetService("TweenService") -- 添加TweenService
 
--- 图片ID映射表
-local IMAGE_IDS = {
-	PERFECT = "rbxassetid://111743689000728",
-	GREAT = "rbxassetid://91491256507420",
-	GOOD = "rbxassetid://71871337320235",
-	BAD = "rbxassetid://117163375852005"
+-- 预加载所有图片
+local imageAssets = {
+    "rbxassetid://111743689000728",  -- PERFECT
+    "rbxassetid://91491256507420",   -- GREAT
+    "rbxassetid://71871337320235",   -- GOOD
+    "rbxassetid://117163375852005",  -- BAD
 }
 
--- 更可靠的预加载方法
-local function reliablePreload()
-	print("开始可靠的图片预加载...")
-
-	-- 创建预加载ScreenGui但不立即销毁
-	local preloadGui = Instance.new("ScreenGui")
-	preloadGui.Name = "JumpImagePreloader"
-	preloadGui.ResetOnSpawn = false
-	preloadGui.DisplayOrder = 9999 -- 放在最底层
-	preloadGui.Enabled = false -- 禁用但不销毁
-
-	-- 为每种图片创建一个ImageLabel并真正加载
-	local loadedCount = 0
-	local totalCount = 0
-
-	for messageType, imageId in pairs(IMAGE_IDS) do
-		totalCount += 1
-
-		local img = Instance.new("ImageLabel")
-		img.Name = messageType
-		img.Size = UDim2.new(0, 10, 0, 10)
-		img.Position = UDim2.new(0, -1000, 0, -1000) -- 完全移出屏幕
-		img.BackgroundTransparency = 1
-		img.ImageTransparency = 1
-		img.Image = imageId
-
-		-- 监听图片加载完成
-		img:GetPropertyChangedSignal("Image"):Connect(function()
-			loadedCount += 1
-			print("图片已加载:", messageType, "(", loadedCount, "/", totalCount, ")")
-		end)
-
-		img.Parent = preloadGui
-	end
-
-	preloadGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
-	-- 等待一段时间确保图片开始加载
-	task.wait(2)
-
-	print("预加载完成。保持预加载Gui存在但不显示。")
-	-- 不销毁，保持引用，这样图片会保留在内存中
-end
-
--- 启动预加载
-task.spawn(function()
-	-- 等待PlayerGui
-	local playerGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
-	-- 等待游戏稳定
-	task.wait(1)
-
-	reliablePreload()
+-- 预加载内容
+local startTime = os.clock()
+ContentProvider:PreloadAsync(imageAssets, function(assetId, status)
+    print("预加载资产:", assetId, "状态:", status)
 end)
+local deltaTime = os.clock() - startTime
+print(("图片预加载完成，耗时 %.2f 秒"):format(deltaTime))
 
--- 原有的显示逻辑保持不变
 PlatformLandMessage.OnClientEvent:Connect(function(messageType)
-	local screenGui = Instance.new("ScreenGui")
-	screenGui.Name = "PlatformLandMessageUI"
-	screenGui.ResetOnSpawn = false
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "PlatformLandMessageUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- 设置ZIndex行为
+    screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
-	local imageLabel = Instance.new("ImageLabel")
-	imageLabel.AnchorPoint = Vector2.new(0.5, 1)
-	imageLabel.Position = UDim2.new(0.5, 0, 1, -200)
-	imageLabel.Size = UDim2.new(0, 300, 0, 150)
-	imageLabel.BackgroundTransparency = 1
-	imageLabel.ScaleType = Enum.ScaleType.Fit
-	imageLabel.Parent = screenGui
+    local imageLabel = Instance.new("ImageLabel")
+    imageLabel.AnchorPoint = Vector2.new(0.5, 1)
+    imageLabel.Position = UDim2.new(0.5, 0, 1, -200)
+    imageLabel.Size = UDim2.new(0, 300, 0, 150)
+    imageLabel.BackgroundTransparency = 1
+    imageLabel.ImageTransparency = 1  -- 初始完全透明
+    imageLabel.ScaleType = Enum.ScaleType.Fit
+    imageLabel.Parent = screenGui
 
-	-- 根据消息类型设置不同的图片
-	if messageType == "PERFECT" then
-		imageLabel.Image = "rbxassetid://111743689000728"
-	elseif messageType == "GREAT" then
-		imageLabel.Image = "rbxassetid://91491256507420"
-	elseif messageType == "GOOD" then
-		imageLabel.Image = "rbxassetid://71871337320235"
-	elseif messageType == "BAD" then
-		imageLabel.Image = "rbxassetid://117163375852005"
-	else
-		imageLabel.Image = ""
-	end
+    -- 根据消息类型设置图片
+    local imageMap = {
+        PERFECT = "rbxassetid://111743689000728",
+        GREAT = "rbxassetid://91491256507420",
+        GOOD = "rbxassetid://71871337320235",
+        BAD = "rbxassetid://117163375852005"
+    }
+    
+    imageLabel.Image = imageMap[messageType] or ""
 
-	screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
-	-- 淡入效果
-	imageLabel.ImageTransparency = 1
-	for i = 1, 10 do
-		imageLabel.ImageTransparency = imageLabel.ImageTransparency - 0.1
-		task.wait(0.05)
-	end
-
-	task.wait(0.5) -- 显示时间
-
-	-- 淡出效果
-	for i = 1, 10 do
-		imageLabel.ImageTransparency = imageLabel.ImageTransparency + 0.1
-		task.wait(0.05)
-	end
-
-	screenGui:Destroy()
+    if imageLabel.Image ~= "" then
+        -- 使用TweenService实现更平滑的动画（性能更好）
+        local fadeInInfo = TweenInfo.new(
+            0.5,  -- 持续时间
+            Enum.EasingStyle.Quad,  -- 缓动风格
+            Enum.EasingDirection.Out  -- 缓动方向
+        )
+        
+        local fadeOutInfo = TweenInfo.new(
+            0.5,
+            Enum.EasingStyle.Quad,
+            Enum.EasingDirection.In
+        )
+        
+        -- 淡入
+        local fadeIn = TweenService:Create(imageLabel, fadeInInfo, {ImageTransparency = 0})
+        fadeIn:Play()
+        
+        -- 等待显示时间
+        task.wait(1.5)  -- 总显示时间
+        
+        -- 淡出
+        local fadeOut = TweenService:Create(imageLabel, fadeOutInfo, {ImageTransparency = 1})
+        fadeOut:Play()
+        
+        -- 等待淡出完成再销毁
+        fadeOut.Completed:Wait()
+    end
+    
+    screenGui:Destroy()
 end)
