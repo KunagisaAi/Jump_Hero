@@ -1,78 +1,129 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PlatformLandMessage = ReplicatedStorage:WaitForChild("PlatformLandMessage")
-local ContentProvider = game:GetService("ContentProvider")
-local TweenService = game:GetService("TweenService") -- 添加TweenService
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
 
--- 预加载所有图片
-local imageAssets = {
-    "rbxassetid://111743689000728",  -- PERFECT
-    "rbxassetid://91491256507420",   -- GREAT
-    "rbxassetid://71871337320235",   -- GOOD
-    "rbxassetid://117163375852005",  -- BAD
+-- 颜色映射
+local colorMap = {
+	PERFECT = Color3.new(1, 0, 0),  -- 红色
+	GREAT = Color3.new(1, 1, 0),    -- 黄色
+	GOOD = Color3.new(0, 1, 0),     -- 绿色
+	BAD = Color3.new(0.5, 0.5, 0.5) -- 灰色
 }
 
--- 预加载内容
-local startTime = os.clock()
-ContentProvider:PreloadAsync(imageAssets, function(assetId, status)
-    print("预加载资产:", assetId, "状态:", status)
-end)
-local deltaTime = os.clock() - startTime
-print(("图片预加载完成，耗时 %.2f 秒"):format(deltaTime))
+-- TweenInfo（预定义复用）
+local fadeInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local fadeOutInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 
+-- 对象池：预创建3个UI（TextLabel + UIStroke辉光）
+local POOL_SIZE = 3
+local uiPool = {}
+local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+for i = 1, POOL_SIZE do
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "PlatformLandMessageUI"
+	screenGui.ResetOnSpawn = false
+	screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	screenGui.Enabled = false  -- 隐藏复用
+	screenGui.Parent = playerGui
+
+	-- 主文本
+	local textLabel = Instance.new("TextLabel")
+	textLabel.AnchorPoint = Vector2.new(0.5, 1)
+	textLabel.Position = UDim2.new(0.5, 0, 1, -200)
+	textLabel.Size = UDim2.new(0, 300, 0, 150)
+	textLabel.BackgroundTransparency = 1
+	textLabel.TextTransparency = 1  -- 初始透明
+	textLabel.Text = ""  -- 动态设
+	textLabel.TextColor3 = Color3.new(1, 1, 1)  -- 默认白，后设颜色
+	textLabel.TextScaled = true
+	textLabel.Font = Enum.Font.GothamBold  -- 粗体醒目
+	textLabel.Parent = screenGui
+
+	-- 打光：UIStroke（上方辉光）
+	local glowStroke = Instance.new("UIStroke")
+	glowStroke.Color = Color3.new(1, 1, 1)  -- 白色辉光
+	glowStroke.Transparency = 0.5  -- 半透
+	glowStroke.Thickness = 3  -- 粗细
+	glowStroke.Parent = textLabel
+
+	-- 辉光位置微调：上移10px，略大Size营造“上方光”
+	local glowLabel = Instance.new("TextLabel")  -- 叠加层做额外辉光
+	glowLabel.AnchorPoint = Vector2.new(0.5, 1)
+	glowLabel.Position = UDim2.new(0.5, 0, 1, -205)  -- 上移5px
+	glowLabel.Size = UDim2.new(0, 320, 0, 170)  -- 略大
+	glowLabel.BackgroundTransparency = 1
+	glowLabel.TextTransparency = 1
+	glowLabel.Text = ""  -- 同主文本
+	glowLabel.TextColor3 = Color3.new(1, 1, 1, 0.3)  -- 浅白超透
+	glowLabel.TextScaled = true
+	glowLabel.Font = Enum.Font.GothamBold
+	glowLabel.ZIndex = textLabel.ZIndex - 1  -- 底层
+	glowLabel.Parent = screenGui
+
+	table.insert(uiPool, {screenGui = screenGui, textLabel = textLabel, glowLabel = glowLabel})
+end
+
+-- 获取/重置函数
+local function getAvailableUI()
+	for _, ui in ipairs(uiPool) do
+		if not ui.screenGui.Enabled then return ui end
+	end
+	return uiPool[1]
+end
+
+local function resetUI(ui)
+	ui.textLabel.Text = ""
+	ui.glowLabel.Text = ""
+	ui.textLabel.TextTransparency = 1
+	ui.glowLabel.TextTransparency = 1
+	ui.screenGui.Enabled = false
+end
+
+-- Tween预热（瞬时）
+local dummy = Instance.new("TextLabel")
+local dummyTween = TweenService:Create(dummy, fadeInInfo, {TextTransparency = 0})
+dummyTween:Play()
+dummyTween.Completed:Wait()
+dummy:Destroy()
+
+-- 事件处理
 PlatformLandMessage.OnClientEvent:Connect(function(messageType)
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "PlatformLandMessageUI"
-    screenGui.ResetOnSpawn = false
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- 设置ZIndex行为
-    screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+	local ui = getAvailableUI()
+	local textLabel = ui.textLabel
+	local glowLabel = ui.glowLabel
 
-    local imageLabel = Instance.new("ImageLabel")
-    imageLabel.AnchorPoint = Vector2.new(0.5, 1)
-    imageLabel.Position = UDim2.new(0.5, 0, 1, -200)
-    imageLabel.Size = UDim2.new(0, 300, 0, 150)
-    imageLabel.BackgroundTransparency = 1
-    imageLabel.ImageTransparency = 1  -- 初始完全透明
-    imageLabel.ScaleType = Enum.ScaleType.Fit
-    imageLabel.Parent = screenGui
+	-- 设置文本 & 颜色
+	local displayText = messageType:upper()  -- e.g., "PERFECT"
+	textLabel.Text = displayText
+	glowLabel.Text = displayText  -- 辉光同文本
+	textLabel.TextColor3 = colorMap[messageType] or Color3.new(1, 1, 1)  -- 设颜色
+	glowLabel.TextColor3 = colorMap[messageType]:Lerp(Color3.new(1, 1, 1), 0.7)  -- 辉光混白，更亮
 
-    -- 根据消息类型设置图片
-    local imageMap = {
-        PERFECT = "rbxassetid://111743689000728",
-        GREAT = "rbxassetid://91491256507420",
-        GOOD = "rbxassetid://71871337320235",
-        BAD = "rbxassetid://117163375852005"
-    }
-    
-    imageLabel.Image = imageMap[messageType] or ""
+	if displayText ~= "" then
+		ui.screenGui.Enabled = true  -- 显示
 
-    if imageLabel.Image ~= "" then
-        -- 使用TweenService实现更平滑的动画（性能更好）
-        local fadeInInfo = TweenInfo.new(
-            0.5,  -- 持续时间
-            Enum.EasingStyle.Quad,  -- 缓动风格
-            Enum.EasingDirection.Out  -- 缓动方向
-        )
-        
-        local fadeOutInfo = TweenInfo.new(
-            0.5,
-            Enum.EasingStyle.Quad,
-            Enum.EasingDirection.In
-        )
-        
-        -- 淡入
-        local fadeIn = TweenService:Create(imageLabel, fadeInInfo, {ImageTransparency = 0})
-        fadeIn:Play()
-        
-        -- 等待显示时间
-        task.wait(1.5)  -- 总显示时间
-        
-        -- 淡出
-        local fadeOut = TweenService:Create(imageLabel, fadeOutInfo, {ImageTransparency = 1})
-        fadeOut:Play()
-        
-        -- 等待淡出完成再销毁
-        fadeOut.Completed:Wait()
-    end
-    
-    screenGui:Destroy()
+		-- 同时淡入主文本 & 辉光
+		local fadeInText = TweenService:Create(textLabel, fadeInInfo, {TextTransparency = 0})
+		local fadeInGlow = TweenService:Create(glowLabel, fadeInInfo, {TextTransparency = 0})
+		fadeInText:Play()
+		fadeInGlow:Play()
+
+		-- 非阻塞序列
+		task.spawn(function()
+			task.wait(1.5)  -- 显示时间
+
+			-- 淡出
+			local fadeOutText = TweenService:Create(textLabel, fadeOutInfo, {TextTransparency = 1})
+			local fadeOutGlow = TweenService:Create(glowLabel, fadeOutInfo, {TextTransparency = 1})
+			fadeOutText:Play()
+			fadeOutGlow:Play()
+
+			-- 完成重置
+			fadeOutText.Completed:Connect(function()
+				resetUI(ui)
+			end)
+		end)
+	end
 end)
