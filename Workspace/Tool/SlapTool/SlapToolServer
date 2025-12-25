@@ -1,0 +1,73 @@
+-- Script in SlapTool（服务器脚本，已替换弃用方法）
+local Tool = script.Parent
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
+
+-- 创建RemoteEvent（如果还没创建的话）
+local SlapEvent = ReplicatedStorage:FindFirstChild("SlapEvent")
+if not SlapEvent then
+	SlapEvent = Instance.new("RemoteEvent")
+	SlapEvent.Name = "SlapEvent"
+	SlapEvent.Parent = ReplicatedStorage
+end
+
+local function OnSlap(player)
+	local SlapCount = Tool:FindFirstChild("SlapCount")
+	local SlapLevel = Tool:FindFirstChild("SlapLevel")
+	if not SlapCount or not SlapLevel then return end
+
+	-- 验证剩余次数
+	if SlapCount.Value <= 0 then
+		return
+	end
+
+	-- 消耗一次
+	SlapCount.Value = SlapCount.Value - 1
+
+	-- 计算击飞范围（每级20米）
+	local Range = 20 * SlapLevel.Value
+
+	local Character = player.Character
+	if not Character then return end
+
+	local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
+	if not HumanoidRootPart then return end
+
+	local Origin = HumanoidRootPart.Position
+
+	-- 新方法：使用 OverlapParams + GetPartBoundsInSphere
+	local OverlapParams = OverlapParams.new()
+	OverlapParams.FilterType = Enum.RaycastFilterType.Exclude
+	OverlapParams.FilterDescendantsInstances = {Character}  -- 排除自己
+	OverlapParams.MaxParts = 50  -- 可选，限制最大检测数量防止性能问题
+
+	-- 获取球形范围内的所有 Parts
+	local PartsInSphere = workspace:GetPartBoundsInSphere(Origin, Range, OverlapParams)
+
+	-- 遍历检测到的 Parts
+	for _, Part in ipairs(PartsInSphere) do
+		local OtherCharacter = Part:FindFirstAncestorWhichIsA("Model")
+		if OtherCharacter and OtherCharacter ~= Character and OtherCharacter:FindFirstChild("Humanoid") then
+			local OtherRootPart = OtherCharacter:FindFirstChild("HumanoidRootPart")
+			if OtherRootPart then
+				-- 计算从自己到对方的方向（向外击飞）
+				local KnockbackDirection = (OtherRootPart.Position - Origin).Unit
+
+				-- 击飞力度（可根据距离或等级调整）
+				local KnockbackPower = Range * 50  -- 你可以自行调整数值
+
+				local BodyVelocity = Instance.new("BodyVelocity")
+				BodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)  -- 足够大的力
+				BodyVelocity.Velocity = KnockbackDirection * KnockbackPower + Vector3.new(0, 50, 0)  -- 稍微向上抬一点，避免卡地
+				BodyVelocity.Parent = OtherRootPart
+
+				-- 0.3秒后自动移除，避免持续飞
+				Debris:AddItem(BodyVelocity, 0.3)
+			end
+		end
+	end
+
+	-- 可选：在这里播放服务器端特效（如冲击波粒子）
+end
+
+SlapEvent.OnServerEvent:Connect(OnSlap)
