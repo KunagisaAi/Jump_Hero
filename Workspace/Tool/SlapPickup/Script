@@ -1,0 +1,38 @@
+-- Script in SlapPickup (Workspace.SlapPickup)
+local Part = script.Parent
+local Debris = game:GetService("Debris")
+
+-- 触碰检测
+Part.Touched:Connect(function(hit)
+	local Character = hit.Parent
+	local Player = game.Players:GetPlayerFromCharacter(Character)
+	if not Player then return end
+
+	-- 检查玩家背包
+	local Backpack = Player.Backpack
+	local SlapTool = Backpack:FindFirstChild("SlapTool") or Player.Character and Player.Character:FindFirstChild("SlapTool")
+
+	if SlapTool then
+		-- 如果已有 SlapTool，增加 SlapCount
+		local SlapCount = SlapTool:FindFirstChild("SlapCount")
+		if SlapCount then
+			SlapCount.Value = SlapCount.Value + 1
+		end
+	else
+		-- 如果没有 SlapTool，创建一个新的
+		local NewTool = game.ServerStorage:FindFirstChild("SlapTool") or game.StarterPack:FindFirstChild("SlapTool")
+		if NewTool then
+			local ToolClone = NewTool:Clone()
+			ToolClone.Parent = Backpack
+			local SlapCount = ToolClone:FindFirstChild("SlapCount")
+			if SlapCount then
+				SlapCount.Value = 1 -- 新道具初始 1 次
+			end
+		end
+	end
+
+	-- 拾取后销毁或隐藏（可选）
+	Part.Transparency = 1
+	Part.CanTouch = false
+	Debris:AddItem(Part, 5) -- 5 秒后销毁，或改成重生
+end)
