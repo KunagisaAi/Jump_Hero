@@ -1,0 +1,178 @@
+-- LocalScript in SlapTool
+local Tool = script.Parent
+local Player = game.Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- 确保 RemoteEvent 存在
+local SlapEvent = ReplicatedStorage:WaitForChild("SlapEvent")
+
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+-- UI 变量
+local SlapUI = nil
+local animationTrack = nil  -- 新增：缓存动画Track，只加载一次
+
+-- 创建巴掌专属 UI（不变）
+local function CreateSlapUI()
+	if SlapUI then return end
+
+	SlapUI = Instance.new("ScreenGui")
+	SlapUI.Name = "SlapToolUI"
+	SlapUI.ResetOnSpawn = false
+	SlapUI.Parent = PlayerGui
+
+	local MainFrame = Instance.new("Frame")
+	MainFrame.Name = "MainFrame"
+	MainFrame.Size = UDim2.new(0, 120, 0, 120)
+	MainFrame.Position = UDim2.new(0, 30, 1, -150)
+	MainFrame.BackgroundTransparency = 0.4
+	MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	MainFrame.BorderSizePixel = 0
+	MainFrame.Parent = SlapUI
+
+	local Corner = Instance.new("UICorner")
+	Corner.CornerRadius = UDim.new(0, 60)
+	Corner.Parent = MainFrame
+
+	local BorderFrame = Instance.new("Frame")
+	BorderFrame.Size = UDim2.new(1, 10, 1, 10)
+	BorderFrame.Position = UDim2.new(0, -5, 0, -5)
+	BorderFrame.BackgroundTransparency = 0.6
+	BorderFrame.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+	BorderFrame.BorderSizePixel = 0
+	BorderFrame.ZIndex = MainFrame.ZIndex - 1
+	BorderFrame.Parent = MainFrame
+
+	local BorderCorner = Instance.new("UICorner")
+	BorderCorner.CornerRadius = UDim.new(0, 65)
+	BorderCorner.Parent = BorderFrame
+
+	local SlapImage = Instance.new("ImageLabel")
+	SlapImage.Name = "SlapImage"
+	SlapImage.Size = UDim2.new(0, 80, 0, 80)
+	SlapImage.Position = UDim2.new(0.5, -40, 0.5, -40)
+	SlapImage.BackgroundTransparency = 1
+	SlapImage.Image = "rbxassetid://1234567890"  -- 替换成你的巴掌图片 ID
+	SlapImage.Parent = MainFrame
+
+	local ImageCorner = Instance.new("UICorner")
+	ImageCorner.CornerRadius = UDim.new(0, 40)
+	ImageCorner.Parent = SlapImage
+
+	local LevelLabel = Instance.new("TextLabel")
+	LevelLabel.Name = "LevelLabel"
+	LevelLabel.Size = UDim2.new(0, 50, 0, 25)
+	LevelLabel.Position = UDim2.new(0, 10, 1, -35)
+	LevelLabel.BackgroundTransparency = 0.6
+	LevelLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	LevelLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+	LevelLabel.TextScaled = true
+	LevelLabel.Font = Enum.Font.GothamBold
+	LevelLabel.Text = "Lv.1"
+	LevelLabel.Parent = MainFrame
+
+	local LevelCorner = Instance.new("UICorner")
+	LevelCorner.CornerRadius = UDim.new(0, 8)
+	LevelCorner.Parent = LevelLabel
+
+	local CountLabel = Instance.new("TextLabel")
+	CountLabel.Name = "CountLabel"
+	CountLabel.Size = UDim2.new(0, 50, 0, 25)
+	CountLabel.Position = UDim2.new(1, -60, 1, -35)
+	CountLabel.BackgroundTransparency = 0.6
+	CountLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	CountLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+	CountLabel.TextScaled = true
+	CountLabel.Font = Enum.Font.GothamBold
+	CountLabel.Text = "x10"
+	CountLabel.Parent = MainFrame
+
+	local CountCorner = Instance.new("UICorner")
+	CountCorner.CornerRadius = UDim.new(0, 8)
+	CountCorner.Parent = CountLabel
+end
+
+-- 更新 UI 显示内容（不变）
+local function UpdateSlapUI()
+	if not SlapUI then return end
+
+	local SlapCount = Tool:FindFirstChild("SlapCount")
+	local SlapLevel = Tool:FindFirstChild("SlapLevel")
+	if not SlapCount or not SlapLevel then return end
+
+	local LevelLabel = SlapUI.MainFrame.LevelLabel
+	local CountLabel = SlapUI.MainFrame.CountLabel
+
+	LevelLabel.Text = "Lv." .. SlapLevel.Value
+	CountLabel.Text = "x" .. SlapCount.Value
+
+	if SlapCount.Value <= 0 then
+		CountLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+	else
+		CountLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+	end
+end
+
+-- 优化后的播放反馈（关键改动！）
+local function PlayFeedback()
+	-- 音效
+	local Sound = Instance.new("Sound")
+	Sound.SoundId = "rbxassetid://1835341225"  -- 示例巴掌音效
+	Sound.Volume = 0.8
+	Sound.Parent = Tool
+	Sound:Play()
+	game.Debris:AddItem(Sound, 3)
+
+	-- 动画：只播放一次（缓存Track + Stop再Play）
+	if Player.Character and Player.Character:FindFirstChild("Humanoid") and animationTrack then
+		animationTrack:Stop()  -- 先停止，确保不叠加
+		animationTrack:Play()  -- 从头播放一次
+	end
+end
+
+-- 按 Q 键触发（新增冷却，防止锤Q）
+local canSlap = true  -- 新增冷却变量
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if not gameProcessed and input.KeyCode == Enum.KeyCode.Q and canSlap then
+		local SlapCount = Tool:FindFirstChild("SlapCount")
+		if SlapCount and SlapCount.Value > 0 then
+			canSlap = false  -- 锁定冷却
+			SlapEvent:FireServer()
+			PlayFeedback()
+			-- 0.5秒冷却（动画时长约0.5s）
+			task.wait(0.5)
+			canSlap = true
+		end
+	end
+end)
+
+-- 装备时：创建UI + 加载动画Track（只一次）
+Tool.Equipped:Connect(function()
+	CreateSlapUI()
+	UpdateSlapUI()
+
+	-- 加载动画Track（只加载一次）
+	if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+		local Animation = Instance.new("Animation")
+		Animation.AnimationId = "rbxassetid://507770239"  -- 替换成你的挥手动画 ID
+		animationTrack = Player.Character.Humanoid:LoadAnimation(Animation)
+		animationTrack.Looped = false  -- 不循环，只播一次
+	end
+
+	-- 监听数值变化
+	Tool.SlapCount.Changed:Connect(UpdateSlapUI)
+	Tool.SlapLevel.Changed:Connect(UpdateSlapUI)
+end)
+
+-- 卸下时：隐藏UI + 清理动画Track
+Tool.Unequipped:Connect(function()
+	if SlapUI then
+		SlapUI:Destroy()
+		SlapUI = nil
+	end
+	if animationTrack then
+		animationTrack:Stop()
+		animationTrack = nil  -- 释放
+	end
+end)

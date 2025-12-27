@@ -3,7 +3,6 @@ local Tool = script.Parent
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 
--- 创建或获取 RemoteEvent
 local SlapEvent = ReplicatedStorage:FindFirstChild("SlapEvent")
 if not SlapEvent then
 	SlapEvent = Instance.new("RemoteEvent")
@@ -16,13 +15,9 @@ local function OnSlap(player)
 	local SlapLevel = Tool:FindFirstChild("SlapLevel")
 	if not SlapCount or not SlapLevel then return end
 
-	-- 验证剩余次数
 	if SlapCount.Value <= 0 then return end
-
-	-- 消耗一次
 	SlapCount.Value = SlapCount.Value - 1
 
-	-- 计算击飞范围（每级 20 米）
 	local Range = 20 * SlapLevel.Value
 	local Character = player.Character
 	if not Character then return end
@@ -30,7 +25,6 @@ local function OnSlap(player)
 	if not HumanoidRootPart then return end
 	local Origin = HumanoidRootPart.Position
 
-	-- 使用 GetPartBoundsInSphere
 	local OverlapParams = OverlapParams.new()
 	OverlapParams.FilterType = Enum.RaycastFilterType.Exclude
 	OverlapParams.FilterDescendantsInstances = {Character}
