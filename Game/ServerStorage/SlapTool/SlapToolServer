@@ -1,8 +1,8 @@
--- Script in SlapTool
 local Tool = script.Parent
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 
+-- 创建/获取 RemoteEvent
 local SlapEvent = ReplicatedStorage:FindFirstChild("SlapEvent")
 if not SlapEvent then
 	SlapEvent = Instance.new("RemoteEvent")
@@ -16,9 +16,9 @@ local function OnSlap(player)
 	if not SlapCount or not SlapLevel then return end
 
 	if SlapCount.Value <= 0 then return end
-	SlapCount.Value = SlapCount.Value - 1
+	SlapCount.Value = SlapCount.Value - 1  -- 消耗次数
 
-	local Range = 20 * SlapLevel.Value
+	local Range = 20 * SlapLevel.Value  -- 范围：每级20米
 	local Character = player.Character
 	if not Character then return end
 	local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
@@ -27,23 +27,24 @@ local function OnSlap(player)
 
 	local OverlapParams = OverlapParams.new()
 	OverlapParams.FilterType = Enum.RaycastFilterType.Exclude
-	OverlapParams.FilterDescendantsInstances = {Character}
-	OverlapParams.MaxParts = 50
+	OverlapParams.FilterDescendantsInstances = {Character}  -- 排除自己
+	OverlapParams.MaxParts = 50  -- 限制检测数量，防性能问题
 
-	local PartsInSphere = workspace:GetPartBoundsInSphere(Origin, Range, OverlapParams)
+	local PartsInRadius = workspace:GetPartBoundsInRadius(Origin, Range, OverlapParams)
 
-	for _, Part in ipairs(PartsInSphere) do
+	-- 遍历击飞
+	for _, Part in ipairs(PartsInRadius) do
 		local OtherCharacter = Part:FindFirstAncestorWhichIsA("Model")
 		if OtherCharacter and OtherCharacter ~= Character and OtherCharacter:FindFirstChild("Humanoid") then
 			local OtherRootPart = OtherCharacter:FindFirstChild("HumanoidRootPart")
 			if OtherRootPart then
 				local KnockbackDirection = (OtherRootPart.Position - Origin).Unit
-				local KnockbackPower = Range * 50
+				local KnockbackPower = Range * 50  -- 击飞力度
 				local BodyVelocity = Instance.new("BodyVelocity")
 				BodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-				BodyVelocity.Velocity = KnockbackDirection * KnockbackPower + Vector3.new(0, 50, 0)
+				BodyVelocity.Velocity = KnockbackDirection * KnockbackPower + Vector3.new(0, 50, 0)  -- 向上抬升
 				BodyVelocity.Parent = OtherRootPart
-				Debris:AddItem(BodyVelocity, 0.3)
+				Debris:AddItem(BodyVelocity, 0.3)  -- 0.3秒后移除
 			end
 		end
 	end

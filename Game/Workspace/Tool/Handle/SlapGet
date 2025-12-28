@@ -1,0 +1,75 @@
+local Players = game:GetService("Players")
+local ServerStorage = game:GetService("ServerStorage")
+
+local TOOL_NAME = "SlapTool"  -- 你的道具在 ServerStorage 中的 Name，必须完全一致！
+local ORIGINAL_TOOL = ServerStorage:WaitForChild(TOOL_NAME)
+
+-- 关键函数：查找玩家是否已有巴掌道具（通过 SlapCount 标识，更安全！）
+local function FindExistingSlapTool(player)
+	local backpack = player:FindFirstChild("Backpack")
+	local character = player.Character
+	if not backpack then return nil end
+
+	-- 先检查装备中（当前手上拿着的 Tool）
+	if character then
+		for _, tool in ipairs(character:GetChildren()) do
+			if tool:IsA("Tool") and tool:FindFirstChild("SlapCount") then
+				return tool
+			end
+		end
+	end
+
+	-- 再检查背包
+	for _, tool in ipairs(backpack:GetChildren()) do
+		if tool:IsA("Tool") and tool:FindFirstChild("SlapCount") then
+			return tool
+		end
+	end
+
+	return nil
+end
+
+-- 主函数：给玩家巴掌道具（支持叠加）
+local function GiveSlapTool(player)
+	local existingTool = FindExistingSlapTool(player)
+
+	if existingTool then
+		-- 已存在：叠加次数 +1
+		local slapCount = existingTool:FindFirstChild("SlapCount")
+		if slapCount then
+			slapCount.Value = slapCount.Value + 1
+			print(player.Name .. " 巴掌次数 +1，现在 x" .. slapCount.Value)
+		end
+	else
+		-- 不存在：克隆新道具给玩家
+		local newTool = ORIGINAL_TOOL:Clone()
+		newTool.Parent = player.Backpack
+		print(player.Name .. " 首次获得巴掌道具")
+	end
+end
+
+-- 触发方式1：玩家点击某个 Part（比如掉落物）
+-- 把这个脚本放进掉落物 Part 里
+-- script.Parent.ClickDetector.MouseClick:Connect(function(player)
+--	GiveSlapTool(player)
+-- end)
+
+-- 触发方式2：ProximityPrompt
+-- script.Parent.ProximityPrompt.Triggered:Connect(function(player)
+--     GiveSlapTool(player)
+-- end)
+
+--触发方式3：Touch（捡起）
+script.Parent.Touched:Connect(function(hit)
+	local character = hit.Parent
+	local player = Players:GetPlayerFromCharacter(character)
+	if player then
+		GiveSlapTool(player)
+		script.Parent:Destroy()  -- 捡起后销毁掉落物
+	end
+end)
+
+-- 触发方式4：商店购买或奖励
+-- 某个 RemoteEvent.OnServerEvent:Connect(function(player)
+--     GiveSlapTool(player)
+-- end)

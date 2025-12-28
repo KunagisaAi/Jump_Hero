@@ -1,4 +1,3 @@
--- LocalScript in SlapTool
 local Tool = script.Parent
 local Player = game.Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
@@ -13,7 +12,7 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 local SlapUI = nil
 local animationTrack = nil  -- 新增：缓存动画Track，只加载一次
 
--- 创建巴掌专属 UI（不变）
+-- 创建巴掌专属 UI
 local function CreateSlapUI()
 	if SlapUI then return end
 
@@ -53,7 +52,7 @@ local function CreateSlapUI()
 	SlapImage.Size = UDim2.new(0, 80, 0, 80)
 	SlapImage.Position = UDim2.new(0.5, -40, 0.5, -40)
 	SlapImage.BackgroundTransparency = 1
-	SlapImage.Image = "rbxassetid://1234567890"  -- 替换成你的巴掌图片 ID
+	SlapImage.Image = "rbxassetid://112838610450276" -- 巴掌图片
 	SlapImage.Parent = MainFrame
 
 	local ImageCorner = Instance.new("UICorner")
@@ -118,7 +117,7 @@ end
 local function PlayFeedback()
 	-- 音效
 	local Sound = Instance.new("Sound")
-	Sound.SoundId = "rbxassetid://1835341225"  -- 示例巴掌音效
+	Sound.SoundId = "rbxassetid://1835341225"  -- 巴掌音效
 	Sound.Volume = 0.8
 	Sound.Parent = Tool
 	Sound:Play()
@@ -135,14 +134,16 @@ end
 local canSlap = true  -- 新增冷却变量
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if not gameProcessed and input.KeyCode == Enum.KeyCode.Q and canSlap then
-		local SlapCount = Tool:FindFirstChild("SlapCount")
-		if SlapCount and SlapCount.Value > 0 then
-			canSlap = false  -- 锁定冷却
-			SlapEvent:FireServer()
-			PlayFeedback()
-			-- 0.5秒冷却（动画时长约0.5s）
-			task.wait(0.5)
-			canSlap = true
+		-- 新增：只有装备时才能使用
+		if Tool.Parent == Player.Character then  -- 道具在角色里 = 已装备
+			local SlapCount = Tool:FindFirstChild("SlapCount")
+			if SlapCount and SlapCount.Value > 0 then
+				canSlap = false
+				SlapEvent:FireServer()
+				PlayFeedback()
+				task.wait(1)  -- 冷却时间
+				canSlap = true
+			end
 		end
 	end
 end)
@@ -155,7 +156,7 @@ Tool.Equipped:Connect(function()
 	-- 加载动画Track（只加载一次）
 	if Player.Character and Player.Character:FindFirstChild("Humanoid") then
 		local Animation = Instance.new("Animation")
-		Animation.AnimationId = "rbxassetid://507770239"  -- 替换成你的挥手动画 ID
+		Animation.AnimationId = "rbxassetid://507770239"  -- 扇巴掌动画
 		animationTrack = Player.Character.Humanoid:LoadAnimation(Animation)
 		animationTrack.Looped = false  -- 不循环，只播一次
 	end
