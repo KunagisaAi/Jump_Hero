@@ -113,7 +113,7 @@ local function UpdateSlapUI()
 	end
 end
 
--- 优化后的播放反馈（关键改动！）
+-- 优化后的播放反馈
 local function PlayFeedback()
 	-- 音效
 	local Sound = Instance.new("Sound")
