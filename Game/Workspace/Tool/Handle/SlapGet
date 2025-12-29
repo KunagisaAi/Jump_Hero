@@ -1,3 +1,4 @@
+-- 实际上这个脚本不能放那边，不然会报错
 local Players = game:GetService("Players")
 local ServerStorage = game:GetService("ServerStorage")
 
