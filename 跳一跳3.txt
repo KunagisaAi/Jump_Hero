@@ -1,10 +1,43 @@
 巴掌
-设置一个UI，数量默认为0，当数量<=0时不能使用，点击UI或按下“J”键后以玩家自身为为原点，当前视角为方向，向外的一定范围，将接触到的其他玩家向外击飞，范围按巴掌等级计算，从1级开始，每升一级击飞强度多击飞20m。使用后数量减1。
 
-你好喵，我是一个roblox开发者，现在我要制作一个巴掌道具，但我不清楚对于这个道具跟玩家的互动要怎么做（例如UI，是玩家触碰按到UI和按键按到“Q”键，按的时候最好有反馈），数量默认为10，当数量<=0时不能使用，以玩家自身为为原点，当前视角为方向，向外的一定范围，将接触到的其他玩家向外击飞，范围按巴掌等级计算，从1级开始，每升一级多击飞20m。使用后数量减1。
-↑（请注意函数会不会被弃用以及位置是否正确）
+你好喵，我是一个roblox开发者，现在我要制作一个巴掌道具，但我不清楚对于这个道具跟玩家的互动要怎么做（例如UI，是玩家触碰按到UI和按键按到“Q”键，按的时候最好有反馈），
+，数量默认为10，当数量<=0时不能使用，以玩家自身为为原点，当前视角为方向，向外的一定范围，将接触到的其他玩家向外击飞，范围按巴掌等级计算，从1级开始，每升一级多击飞20m。使用后数量减1。
+↑（请注意函数会不会被弃用以及脚本放置位置是否正确）
 
+我不打算把巴掌的信息增加到装备栏上面了，我打算新建一个巴掌的UI在屏幕左下角，UI中间显示巴掌的图片，然后有一圈半透明圆圈包裹着，UI的左下角显示巴掌等级（SlapLevel），右下角显示巴掌数量（SlapCount），这是我现在的巴掌LocalScript代码：【代码】
+↑（请确认动画每次只触发一次，且不会叠加触发）
 
+我不知道为什么，他会报错GetPartBoundsInSphere is not a valid member of Workspace "Workspace"
+↑（因为Roblox 根本就没有 GetPartBoundsInSphere 这个 API 方法，如不触发则忽略）
+
+当首次获得这个道具的时候正常获得道具，再次获得这个道具时SlapCount数量加一，这是我的服务端Script：【代码】
+
+我把TOOL_NAME的值变成了“Handle”，当我没使用时能够正常检测并增加，当我使用过后并且处于没使用完的情况下仍然会识别为获得新道具，他在没有装备的情况下使用仍会消耗数量。
+↑（实际上并不用改变名字（Handle），SlapTool就足以）
+
+你好，当我使用过后道具无法识别为旧道具，仍然会增加新巴掌，并且还会报：Script 'Players.KuangisaAi.Backpack.SlapTool.Handle.Script', Line 7
+↑脚本位置放错了，这是放置在物体“Handle”下的脚本，放服务器那边会报错
+
+当我将道具装备在手上时，再接触巴掌道具会添加新的巴掌道具，这是我现在的代码：【代码】
+请多次确认结构
+SlapTool (Tool)  ← Name 必须是 "SlapTool"
+├── Handle (Part)
+├── SlapCount (NumberValue)  ← Value = 10
+├── SlapLevel (NumberValue)  ← Value = 1
+├── LocalScript  ← 你的UI + Q键代码
+└── Script       ← 击飞逻辑服务器脚本（不能放在 Handle 里！）
+
+我发现玩家死亡后道具消失道具的专属UI不会跟着消失，我想玩家每次复活都检测一次，这是我的LocalScript代码:【代码】
+↑这里的脚本“DataStore”仅在正式发布时会生效，否则无效
+
+卧槽，玩家之间的次数是共享的，这很奇怪，我希望每个玩家的道具都是独立的，无论是SlapCount还是SlapLevel、SlapTool道具本身甚至是其他东西，我的SlapTool在ServerStorage里，下面是我的SlapGet代码：【代码】
+SlapTool (Tool)
+├── Handle (Part)
+├── SlapCount (NumberValue, Value=10)
+├── SlapLevel (NumberValue, Value=1)
+└── LocalScript (UI + Q键)
+↑位置改变一下，原这里的SlapToolServer（上Script）移动至ServerScriptService
 
 护盾
+
 设置一个UI，数量默认为0，当数量<=0时不能使用，不会被击飞，且免疫任何伤害，效果持续时间按护盾等级计算，从1级开始，每升一级持续时间多1.5秒。使用后数量减1。
