@@ -2,10 +2,9 @@
 local Players = game:GetService("Players")
 local ServerStorage = game:GetService("ServerStorage")
 
-local TOOL_NAME = "SlapTool"  -- 你的道具在 ServerStorage 中的 Name，必须完全一致！
+local TOOL_NAME = "SlapTool"
 local ORIGINAL_TOOL = ServerStorage:WaitForChild(TOOL_NAME)
 
--- 关键函数：查找玩家是否已有巴掌道具（通过 SlapCount 标识，更安全！）
 local function FindExistingSlapTool(player)
 	local backpack = player:FindFirstChild("Backpack")
 	local character = player.Character
