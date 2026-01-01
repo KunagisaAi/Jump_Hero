@@ -10,7 +10,7 @@ if not SlapEvent then
 	SlapEvent.Parent = ReplicatedStorage
 end
 
--- 辅助函数：找指定玩家的 SlapTool（装备或背包）
+-- 辅助函数：找指定玩家的 ShieldTool（装备或背包）
 local function FindPlayerSlapTool(player)
 	local character = player.Character
 	local backpack = player.Backpack
@@ -63,15 +63,22 @@ local function OnSlap(player)
 	for _, Part in ipairs(PartsInRadius) do
 		local OtherCharacter = Part:FindFirstAncestorWhichIsA("Model")
 		if OtherCharacter and OtherCharacter ~= Character and OtherCharacter:FindFirstChild("Humanoid") then
-			local OtherRootPart = OtherCharacter:FindFirstChild("HumanoidRootPart")
-			if OtherRootPart then
-				local KnockbackDirection = (OtherRootPart.Position - Origin).Unit
-				local KnockbackPower = Range * 50
-				local BodyVelocity = Instance.new("BodyVelocity")
-				BodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-				BodyVelocity.Velocity = KnockbackDirection * KnockbackPower + Vector3.new(0, 50, 0)
-				BodyVelocity.Parent = OtherRootPart
-				Debris:AddItem(BodyVelocity, 0.3)
+			-- 新增：免疫护盾玩家
+			local otherShieldActive = OtherCharacter:FindFirstChild("ShieldActive")
+			if otherShieldActive then continue end  -- 跳过护盾玩家！
+			
+			local OtherCharacter = Part:FindFirstAncestorWhichIsA("Model")
+			if OtherCharacter and OtherCharacter ~= Character and OtherCharacter:FindFirstChild("Humanoid") then
+				local OtherRootPart = OtherCharacter:FindFirstChild("HumanoidRootPart")
+				if OtherRootPart then
+					local KnockbackDirection = (OtherRootPart.Position - Origin).Unit
+					local KnockbackPower = Range * 50
+					local BodyVelocity = Instance.new("BodyVelocity")
+					BodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+					BodyVelocity.Velocity = KnockbackDirection * KnockbackPower + Vector3.new(0, 50, 0)
+					BodyVelocity.Parent = OtherRootPart
+					Debris:AddItem(BodyVelocity, 0.3)
+				end
 			end
 		end
 	end

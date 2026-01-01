@@ -1,0 +1,53 @@
+-- 服务器脚本：护盾掉落物（完全参照SlapGet，改名字）
+local Players = game:GetService("Players")
+local ServerStorage = game:GetService("ServerStorage")
+
+local TOOL_NAME = "ShieldTool"  -- 护盾道具Name
+local ORIGINAL_TOOL = ServerStorage:WaitForChild(TOOL_NAME)
+
+local function FindExistingShieldTool(player)
+	local backpack = player:FindFirstChild("Backpack")
+	local character = player.Character
+	if not backpack then return nil end
+
+	if character then
+		for _, tool in ipairs(character:GetChildren()) do
+			if tool:IsA("Tool") and tool:FindFirstChild("ShieldCount") then
+				return tool
+			end
+		end
+	end
+
+	for _, tool in ipairs(backpack:GetChildren()) do
+		if tool:IsA("Tool") and tool:FindFirstChild("ShieldCount") then
+			return tool
+		end
+	end
+
+	return nil
+end
+
+local function GiveShieldTool(player)
+	local existingTool = FindExistingShieldTool(player)
+
+	if existingTool then
+		local shieldCount = existingTool:FindFirstChild("ShieldCount")
+		if shieldCount then
+			shieldCount.Value = shieldCount.Value + 1
+			print(player.Name .. " 护盾次数 +1，现在 x" .. shieldCount.Value)
+		end
+	else
+		local newTool = ORIGINAL_TOOL:Clone()
+		newTool.Parent = player.Backpack
+		print(player.Name .. " 首次获得护盾道具")
+	end
+end
+
+script.Parent.Touched:Connect(function(hit)
+	local character = hit.Parent
+	local player = Players:GetPlayerFromCharacter(character)
+	if player then
+		GiveShieldTool(player)
+		script.Parent:Destroy()
+	end
+end)

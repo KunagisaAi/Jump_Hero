@@ -1,0 +1,120 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local ShieldEvent = ReplicatedStorage:FindFirstChild("ShieldEvent")
+if not ShieldEvent then
+	ShieldEvent = Instance.new("RemoteEvent")
+	ShieldEvent.Name = "ShieldEvent"
+	ShieldEvent.Parent = ReplicatedStorage
+end
+
+local function FindPlayerShieldTool(player)
+	local character = player.Character
+	local backpack = player.Backpack
+
+	if character then
+		for _, tool in ipairs(character:GetChildren()) do
+			if tool:IsA("Tool") and tool:FindFirstChild("ShieldCount") then
+				return tool
+			end
+		end
+	end
+
+	for _, tool in ipairs(backpack:GetChildren()) do
+		if tool:IsA("Tool") and tool:FindFirstChild("ShieldCount") then
+			return tool
+		end
+	end
+
+	return nil
+end
+
+local function OnShield(player)
+	local playerTool = FindPlayerShieldTool(player)
+	if not playerTool then return end
+
+	local ShieldCount = playerTool:FindFirstChild("ShieldCount")
+	local ShieldLevel = playerTool:FindFirstChild("ShieldLevel")
+	if not ShieldCount or not ShieldLevel or ShieldCount.Value <= 0 then return end
+
+	ShieldCount.Value = ShieldCount.Value - 1
+
+	local Character = player.Character
+	if not Character then return end
+
+	local Humanoid = Character:FindFirstChild("Humanoid")
+	if not Humanoid then return end
+
+	-- 无敌核心：冻结血条（不扣血、不回血）
+	local originalHealth = Humanoid.Health  -- 记住当前血量
+	local healthConnection
+	healthConnection = Humanoid.HealthChanged:Connect(function(newHealth)
+		if newHealth < originalHealth then
+			Humanoid.Health = originalHealth  -- 强制不扣血
+		end
+	end)
+
+	-- ForceField 防物理/爆炸
+	local ForceField = Instance.new("ForceField")
+	ForceField.Parent = Character
+
+	-- 击飞免疫标记
+	local ShieldActive = Instance.new("BoolValue")
+	ShieldActive.Name = "ShieldActive"
+	ShieldActive.Value = true
+	ShieldActive.Parent = Character
+
+	-- 持续时间
+	local Duration = 3 + 0.5 * (ShieldLevel.Value - 1)
+
+	-- 3个盾牌旋转动画（不变）
+	local Shields = {}
+	local connection
+	local timeStart = tick()
+
+	for i = 1, 3 do
+		local ShieldPart = Instance.new("Part")
+		ShieldPart.Name = "ShieldOrb" .. i
+		ShieldPart.Shape = Enum.PartType.Ball
+		ShieldPart.Size = Vector3.new(2, 2, 2)
+		ShieldPart.Material = Enum.Material.ForceField
+		ShieldPart.BrickColor = BrickColor.new("Bright blue")
+		ShieldPart.CanCollide = false
+		ShieldPart.Anchored = true
+		ShieldPart.Parent = workspace
+
+		table.insert(Shields, ShieldPart)
+	end
+
+	connection = RunService.Heartbeat:Connect(function()
+		local elapsed = tick() - timeStart
+		if elapsed >= Duration then
+			connection:Disconnect()
+			return
+		end
+
+		local RootPart = Character:FindFirstChild("HumanoidRootPart")
+		if not RootPart then return end
+
+		local time = elapsed * 2
+		for i, shield in ipairs(Shields) do
+			local Angle = (time * math.pi * 2 + (i - 1) * 2 * math.pi / 3) % (math.pi * 2)
+			shield.CFrame = RootPart.CFrame * CFrame.new(math.cos(Angle) * 5, 3, math.sin(Angle) * 5)
+		end
+	end)
+
+	-- Duration 后清理
+	task.delay(Duration, function()
+		if ForceField then ForceField:Destroy() end
+		if ShieldActive then ShieldActive:Destroy() end
+		for _, shield in ipairs(Shields) do
+			if shield then shield:Destroy() end
+		end
+		if healthConnection then healthConnection:Disconnect() end
+		connection:Disconnect()
+	end)
+end
+
+ShieldEvent.OnServerEvent:Connect(OnShield)

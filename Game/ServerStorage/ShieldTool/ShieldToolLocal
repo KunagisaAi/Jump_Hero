@@ -3,31 +3,29 @@ local Player = game.Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- 确保 RemoteEvent 存在
-local SlapEvent = ReplicatedStorage:WaitForChild("SlapEvent")
+local ShieldEvent = ReplicatedStorage:WaitForChild("ShieldEvent")
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
--- UI 变量
-local SlapUI = nil
-local animationTrack = nil  -- 新增：缓存动画Track，只加载一次
+local ShieldUI = nil
+local animationTrack = nil
 
--- 创建巴掌专属 UI
-local function CreateSlapUI()
-	if SlapUI then return end
+-- 创建护盾专属 UI（不变）
+local function CreateShieldUI()
+	if ShieldUI then return end
 
-	SlapUI = Instance.new("ScreenGui")
-	SlapUI.Name = "SlapToolUI"
-	SlapUI.ResetOnSpawn = false
-	SlapUI.Parent = PlayerGui
+	ShieldUI = Instance.new("ScreenGui")
+	ShieldUI.Name = "ShieldToolUI"
+	ShieldUI.ResetOnSpawn = false
+	ShieldUI.Parent = PlayerGui
 
 	local MainFrame = Instance.new("Frame")
 	MainFrame.Name = "MainFrame"
 	MainFrame.Size = UDim2.new(0, 120, 0, 120)
-	MainFrame.Position = UDim2.new(0, 30, 1, -150)
+	MainFrame.Position = UDim2.new(0, 30, 1, -150)  -- 左下角，可调
 	MainFrame.BackgroundTransparency = 0.4
 	MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 	MainFrame.BorderSizePixel = 0
-	MainFrame.Parent = SlapUI
+	MainFrame.Parent = ShieldUI
 
 	local Corner = Instance.new("UICorner")
 	Corner.CornerRadius = UDim.new(0, 60)
@@ -37,7 +35,7 @@ local function CreateSlapUI()
 	BorderFrame.Size = UDim2.new(1, 10, 1, 10)
 	BorderFrame.Position = UDim2.new(0, -5, 0, -5)
 	BorderFrame.BackgroundTransparency = 0.6
-	BorderFrame.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+	BorderFrame.BackgroundColor3 = Color3.fromRGB(100, 200, 255)  -- 蓝光边框
 	BorderFrame.BorderSizePixel = 0
 	BorderFrame.ZIndex = MainFrame.ZIndex - 1
 	BorderFrame.Parent = MainFrame
@@ -46,18 +44,20 @@ local function CreateSlapUI()
 	BorderCorner.CornerRadius = UDim.new(0, 65)
 	BorderCorner.Parent = BorderFrame
 
-	local SlapImage = Instance.new("ImageLabel")
-	SlapImage.Name = "SlapImage"
-	SlapImage.Size = UDim2.new(0, 80, 0, 80)
-	SlapImage.Position = UDim2.new(0.5, -40, 0.5, -40)
-	SlapImage.BackgroundTransparency = 1
-	SlapImage.Image = "rbxassetid://112838610450276" -- 巴掌图片
-	SlapImage.Parent = MainFrame
+	-- 盾牌图片
+	local ShieldImage = Instance.new("ImageLabel")
+	ShieldImage.Name = "ShieldImage"
+	ShieldImage.Size = UDim2.new(0, 80, 0, 80)
+	ShieldImage.Position = UDim2.new(0.5, -40, 0.5, -40)
+	ShieldImage.BackgroundTransparency = 1
+	ShieldImage.Image = "rbxassetid://122269719475476"
+	ShieldImage.Parent = MainFrame
 
 	local ImageCorner = Instance.new("UICorner")
 	ImageCorner.CornerRadius = UDim.new(0, 40)
-	ImageCorner.Parent = SlapImage
+	ImageCorner.Parent = ShieldImage
 
+	-- 等级（左下）
 	local LevelLabel = Instance.new("TextLabel")
 	LevelLabel.Name = "LevelLabel"
 	LevelLabel.Size = UDim2.new(0, 50, 0, 25)
@@ -74,6 +74,7 @@ local function CreateSlapUI()
 	LevelCorner.CornerRadius = UDim.new(0, 8)
 	LevelCorner.Parent = LevelLabel
 
+	-- 数量（右下）
 	local CountLabel = Instance.new("TextLabel")
 	CountLabel.Name = "CountLabel"
 	CountLabel.Size = UDim2.new(0, 50, 0, 25)
@@ -91,88 +92,95 @@ local function CreateSlapUI()
 	CountCorner.Parent = CountLabel
 end
 
--- 更新 UI 显示内容（不变）
-local function UpdateSlapUI()
-	if not SlapUI then return end
+-- 更新 UI（不变）
+local function UpdateShieldUI()
+	if not ShieldUI then return end
+	local ShieldCount = Tool:FindFirstChild("ShieldCount")
+	local ShieldLevel = Tool:FindFirstChild("ShieldLevel")
+	if not ShieldCount or not ShieldLevel then return end
 
-	local SlapCount = Tool:FindFirstChild("SlapCount")
-	local SlapLevel = Tool:FindFirstChild("SlapLevel")
-	if not SlapCount or not SlapLevel then return end
+	local LevelLabel = ShieldUI.MainFrame.LevelLabel
+	local CountLabel = ShieldUI.MainFrame.CountLabel
 
-	local LevelLabel = SlapUI.MainFrame.LevelLabel
-	local CountLabel = SlapUI.MainFrame.CountLabel
+	LevelLabel.Text = "Lv." .. ShieldLevel.Value
+	CountLabel.Text = "x" .. ShieldCount.Value
 
-	LevelLabel.Text = "Lv." .. SlapLevel.Value
-	CountLabel.Text = "x" .. SlapCount.Value
-
-	if SlapCount.Value <= 0 then
-		CountLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-	else
-		CountLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
-	end
+	CountLabel.TextColor3 = ShieldCount.Value > 0 and Color3.fromRGB(255, 255, 100) or Color3.fromRGB(255, 100, 100)
 end
 
--- 优化后的播放反馈
+-- 播放使用反馈（不变）
 local function PlayFeedback()
-	-- 音效
 	local Sound = Instance.new("Sound")
-	Sound.SoundId = "rbxassetid://1835341225"  -- 巴掌音效
+	Sound.SoundId = "rbxassetid://138081500"  -- 护盾激活音效
 	Sound.Volume = 0.8
 	Sound.Parent = Tool
 	Sound:Play()
 	game.Debris:AddItem(Sound, 3)
 
-	-- 动画：只播放一次（缓存Track + Stop再Play）
+	-- 激活动画
 	if Player.Character and Player.Character:FindFirstChild("Humanoid") and animationTrack then
-		animationTrack:Stop()  -- 先停止，确保不叠加
-		animationTrack:Play()  -- 从头播放一次
+		animationTrack:Stop()
+		animationTrack:Play()
 	end
 end
 
--- 按 Q 键触发（新增冷却，防止锤Q）
-local canSlap = true  -- 新增冷却变量
+-- Q键触发（不变）
+local canShield = true
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if not gameProcessed and input.KeyCode == Enum.KeyCode.Q and canSlap then
-		-- 新增：只有装备时才能使用
-		if Tool.Parent == Player.Character then  -- 道具在角色里 = 已装备
-			local SlapCount = Tool:FindFirstChild("SlapCount")
-			if SlapCount and SlapCount.Value > 0 then
-				canSlap = false
-				SlapEvent:FireServer()
+	if not gameProcessed and input.KeyCode == Enum.KeyCode.Q and canShield then
+		if Tool.Parent == Player.Character then
+			local ShieldCount = Tool:FindFirstChild("ShieldCount")
+			if ShieldCount and ShieldCount.Value > 0 then
+				canShield = false
+				ShieldEvent:FireServer()
 				PlayFeedback()
-				task.wait(1)  -- 冷却时间
-				canSlap = true
+				task.wait(1)
+				canShield = true
 			end
 		end
 	end
 end)
 
--- 装备时：创建UI + 加载动画Track（只一次）
-Tool.Equipped:Connect(function()
-	CreateSlapUI()
-	UpdateSlapUI()
+-- 装备/死亡复活处理（不变）
+local function RebuildUIAndAnimation()
+	CreateShieldUI()
+	UpdateShieldUI()
 
-	-- 加载动画Track（只加载一次）
 	if Player.Character and Player.Character:FindFirstChild("Humanoid") then
 		local Animation = Instance.new("Animation")
-		Animation.AnimationId = "rbxassetid://507770239"  -- 扇巴掌动画
+		Animation.AnimationId = "rbxassetid://507766388"  -- 举盾动画ID
 		animationTrack = Player.Character.Humanoid:LoadAnimation(Animation)
-		animationTrack.Looped = false  -- 不循环，只播一次
+		animationTrack.Looped = false
 	end
 
-	-- 监听数值变化
-	Tool.SlapCount.Changed:Connect(UpdateSlapUI)
-	Tool.SlapLevel.Changed:Connect(UpdateSlapUI)
+	Tool.ShieldCount.Changed:Connect(UpdateShieldUI)
+	Tool.ShieldLevel.Changed:Connect(UpdateShieldUI)
+end
+
+Player.CharacterAdded:Connect(function()
+	task.wait(1)
+	if Player.Character:FindFirstChildWhichIsA("Tool") and Player.Character:FindFirstChildWhichIsA("Tool"):FindFirstChild("ShieldCount") then
+		RebuildUIAndAnimation()
+	end
 end)
 
--- 卸下时：隐藏UI + 清理动画Track
+Tool.Equipped:Connect(RebuildUIAndAnimation)
+
 Tool.Unequipped:Connect(function()
-	if SlapUI then
-		SlapUI:Destroy()
-		SlapUI = nil
+	if ShieldUI then
+		ShieldUI:Destroy()
+		ShieldUI = nil
 	end
 	if animationTrack then
 		animationTrack:Stop()
-		animationTrack = nil  -- 释放
+		animationTrack = nil
+	end
+end)
+
+-- 初始检查（不变）
+task.spawn(function()
+	task.wait(2)
+	if Tool.Parent == Player.Character then
+		RebuildUIAndAnimation()
 	end
 end)
