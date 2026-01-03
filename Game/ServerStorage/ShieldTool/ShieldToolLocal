@@ -4,6 +4,7 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ShieldEvent = ReplicatedStorage:WaitForChild("ShieldEvent")
+local RemoveToolEvent = ReplicatedStorage:WaitForChild("RemoveToolEvent")
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local ShieldUI = nil
@@ -141,31 +142,55 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	end
 end)
 
--- 装备/死亡复活处理（不变）
+local function CleanupTool()
+	if ShieldUI then
+		ShieldUI:Destroy()
+		ShieldUI = nil
+	end
+	if animationTrack then
+		animationTrack:Stop()
+		animationTrack = nil
+	end
+
+	if RemoveToolEvent then
+		RemoveToolEvent:FireServer("ShieldTool")
+	end
+end
+
+-- **Rebuild 函数（装备时重建 UI + 动画 + 绑定 Died）**
 local function RebuildUIAndAnimation()
 	CreateShieldUI()
 	UpdateShieldUI()
 
 	if Player.Character and Player.Character:FindFirstChild("Humanoid") then
 		local Animation = Instance.new("Animation")
-		Animation.AnimationId = "rbxassetid://507766388"  -- 举盾动画ID
+		Animation.AnimationId = "rbxassetid://507766388"
 		animationTrack = Player.Character.Humanoid:LoadAnimation(Animation)
 		animationTrack.Looped = false
 	end
 
 	Tool.ShieldCount.Changed:Connect(UpdateShieldUI)
 	Tool.ShieldLevel.Changed:Connect(UpdateShieldUI)
+
+	-- **关键：绑定当前 Humanoid 的 Died 事件**
+	local humanoid = Player.Character:FindFirstChild("Humanoid")
+	if humanoid then
+		humanoid.Died:Connect(CleanupTool)
+	end
 end
 
-Player.CharacterAdded:Connect(function()
-	task.wait(1)
-	if Player.Character:FindFirstChildWhichIsA("Tool") and Player.Character:FindFirstChildWhichIsA("Tool"):FindFirstChild("ShieldCount") then
-		RebuildUIAndAnimation()
+-- 装备时触发 Rebuild
+Tool.Equipped:Connect(RebuildUIAndAnimation)
+
+-- 数量 <=0 时清理
+Tool.ShieldCount.Changed:Connect(function(newCount)
+	UpdateShieldUI()
+	if newCount <= 0 then
+		CleanupTool()
 	end
 end)
 
-Tool.Equipped:Connect(RebuildUIAndAnimation)
-
+-- 卸下时清理
 Tool.Unequipped:Connect(function()
 	if ShieldUI then
 		ShieldUI:Destroy()
@@ -177,7 +202,16 @@ Tool.Unequipped:Connect(function()
 	end
 end)
 
--- 初始检查（不变）
+-- 复活时重建 + 重新绑定 Died
+Player.CharacterAdded:Connect(function(character)
+	task.wait(1)
+	local equippedTool = character:FindFirstChildWhichIsA("Tool")
+	if equippedTool and equippedTool:FindFirstChild("ShieldCount") then
+		RebuildUIAndAnimation()
+	end
+end)
+
+-- 初始检查
 task.spawn(function()
 	task.wait(2)
 	if Tool.Parent == Player.Character then

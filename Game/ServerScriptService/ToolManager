@@ -1,0 +1,37 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+
+local RemoveToolEvent = Instance.new("RemoteEvent")
+RemoveToolEvent.Name = "RemoveToolEvent"
+RemoveToolEvent.Parent = ReplicatedStorage
+
+-- 移除指定玩家的指定道具（Backpack + Character）
+local function RemovePlayerTool(player, toolName)
+	-- 移除装备中
+	if player.Character then
+		local equippedTool = player.Character:FindFirstChild(toolName)
+		if equippedTool then
+			equippedTool:Destroy()
+			print(player.Name .. " 装备中的 " .. toolName .. " 已移除")
+		end
+	end
+
+	-- 移除背包
+	local backpackTool = player.Backpack:FindFirstChild(toolName)
+	if backpackTool then
+		backpackTool:Destroy()
+		print(player.Name .. " 背包中的 " .. toolName .. " 已移除")
+	end
+end
+
+RemoveToolEvent.OnServerEvent:Connect(RemovePlayerTool)
+
+-- 额外：监听玩家死亡，全清道具（备用，确保不残留）
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function(character)
+		-- 死亡后 1s 清道具（防止残留）
+		task.wait(1)
+		RemovePlayerTool(player, "SlapTool")
+		RemovePlayerTool(player, "ShieldTool")
+	end)
+end)

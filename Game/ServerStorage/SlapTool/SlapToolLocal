@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- 确保 RemoteEvent 存在
 local SlapEvent = ReplicatedStorage:WaitForChild("SlapEvent")
+local RemoveToolEvent = ReplicatedStorage:WaitForChild("RemoveToolEvent")
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
 -- UI 变量
@@ -91,7 +92,7 @@ local function CreateSlapUI()
 	CountCorner.Parent = CountLabel
 end
 
--- 更新 UI 显示内容（不变）
+-- 更新 UI 显示内容
 local function UpdateSlapUI()
 	if not SlapUI then return end
 
@@ -147,25 +148,55 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	end
 end)
 
+-- 清理函数
+local function CleanupTool()
+	if SlapUI then
+		SlapUI:Destroy()
+		SlapUI = nil
+	end
+	if animationTrack then
+		animationTrack:Stop()
+		animationTrack = nil
+	end
+
+	-- 如果有 RemoveToolEvent，通知服务器移除道具（可选，防止残留）
+	local RemoveToolEvent = ReplicatedStorage:FindFirstChild("RemoveToolEvent")
+	if RemoveToolEvent then
+		RemoveToolEvent:FireServer("SlapTool")
+	end
+end
+
 -- 装备时：创建UI + 加载动画Track（只一次）
 Tool.Equipped:Connect(function()
 	CreateSlapUI()
 	UpdateSlapUI()
 
-	-- 加载动画Track（只加载一次）
 	if Player.Character and Player.Character:FindFirstChild("Humanoid") then
 		local Animation = Instance.new("Animation")
-		Animation.AnimationId = "rbxassetid://507770239"  -- 扇巴掌动画
+		Animation.AnimationId = "rbxassetid://507770239"
 		animationTrack = Player.Character.Humanoid:LoadAnimation(Animation)
-		animationTrack.Looped = false  -- 不循环，只播一次
+		animationTrack.Looped = false
 	end
 
-	-- 监听数值变化
 	Tool.SlapCount.Changed:Connect(UpdateSlapUI)
 	Tool.SlapLevel.Changed:Connect(UpdateSlapUI)
+
+	-- 绑定当前 Humanoid 的 Died 事件（死亡时清理）
+	local humanoid = Player.Character:FindFirstChild("Humanoid")
+	if humanoid then
+		humanoid.Died:Connect(CleanupTool)
+	end
 end)
 
--- 卸下时：隐藏UI + 清理动画Track
+-- 数量 <=0 时自动清理
+Tool.SlapCount.Changed:Connect(function(newCount)
+	UpdateSlapUI()
+	if newCount <= 0 then
+		CleanupTool()
+	end
+end)
+
+-- 卸下时隐藏 UI
 Tool.Unequipped:Connect(function()
 	if SlapUI then
 		SlapUI:Destroy()
@@ -173,6 +204,6 @@ Tool.Unequipped:Connect(function()
 	end
 	if animationTrack then
 		animationTrack:Stop()
-		animationTrack = nil  -- 释放
+		animationTrack = nil
 	end
 end)

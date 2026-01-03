@@ -51,5 +51,12 @@ SlapTool (Tool)
 ↑↓请结合这两个进行操作
 只是不回血，但是也不扣血
 
+很好很好，我想该玩家死亡及道具使用完后（即数量为0）清除所有道具专属UI和装备栏的该道具：
+这是我的SlapToolLocal:
+这是我的ShieldToolLocal:
+↑Player.CharacterRemoving:Connect(CleanupTool)这行代码无效，如果有请不要使用
+
+
+
 
 
