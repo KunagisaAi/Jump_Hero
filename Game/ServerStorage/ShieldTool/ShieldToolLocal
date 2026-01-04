@@ -125,17 +125,17 @@ local function PlayFeedback()
 	end
 end
 
--- Q键触发（不变）
+-- 鼠标左键触发
 local canShield = true
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if not gameProcessed and input.KeyCode == Enum.KeyCode.Q and canShield then
+	if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton1 and canShield then
 		if Tool.Parent == Player.Character then
 			local ShieldCount = Tool:FindFirstChild("ShieldCount")
 			if ShieldCount and ShieldCount.Value > 0 then
 				canShield = false
 				ShieldEvent:FireServer()
 				PlayFeedback()
-				task.wait(1)
+				task.wait(2)
 				canShield = true
 			end
 		end

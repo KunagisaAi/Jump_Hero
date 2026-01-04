@@ -130,10 +130,10 @@ local function PlayFeedback()
 	end
 end
 
--- 按 Q 键触发（新增冷却，防止锤Q）
+-- 鼠标左键触发
 local canSlap = true  -- 新增冷却变量
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if not gameProcessed and input.KeyCode == Enum.KeyCode.Q and canSlap then
+	if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton1 and canSlap then
 		-- 新增：只有装备时才能使用
 		if Tool.Parent == Player.Character then  -- 道具在角色里 = 已装备
 			local SlapCount = Tool:FindFirstChild("SlapCount")
@@ -141,7 +141,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 				canSlap = false
 				SlapEvent:FireServer()
 				PlayFeedback()
-				task.wait(1)  -- 冷却时间
+				task.wait(2)  -- 冷却时间
 				canSlap = true
 			end
 		end
