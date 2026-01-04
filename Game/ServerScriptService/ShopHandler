@@ -1,0 +1,70 @@
+-- ServerScriptService/ShopHandler
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+
+local BuyItemEvent = ReplicatedStorage:WaitForChild("BuyItemEvent")
+local ShopConfig = require(ReplicatedStorage:WaitForChild("ShopConfig"))
+
+local function GetItemById(id)
+	for _, item in ipairs(ShopConfig) do
+		if item.id == id then
+			return item
+		end
+	end
+end
+
+local function FindExistingTool(player, toolType)
+	local backpack = player.Backpack
+	local character = player.Character
+	local countName = toolType == "Slap" and "SlapCount" or "ShieldCount"
+
+	if character then
+		for _, tool in ipairs(character:GetChildren()) do
+			if tool:IsA("Tool") and tool:FindFirstChild(countName) then
+				return tool
+			end
+		end
+	end
+
+	for _, tool in ipairs(backpack:GetChildren()) do
+		if tool:IsA("Tool") and tool:FindFirstChild(countName) then
+			return tool
+		end
+	end
+
+	return nil
+end
+
+BuyItemEvent.OnServerEvent:Connect(function(player, itemId)
+	local item = GetItemById(itemId)
+	if not item then return end
+
+	local gold = player.leaderstats.Gold
+	if gold.Value < item.price then return end
+
+	gold.Value = gold.Value - item.price
+
+	local toolName = item.type == "Slap" and "SlapTool" or "ShieldTool"
+	local originalTool = ServerStorage:FindFirstChild(toolName)
+	if not originalTool then return end
+
+	local existingTool = FindExistingTool(player, item.type)
+	if existingTool then
+		local level = existingTool:FindFirstChild(item.type == "Slap" and "SlapLevel" or "ShieldLevel")
+		if level then
+			level.Value = item.level  -- 覆盖到购买级别
+		end
+		-- 加1次数
+		local count = existingTool:FindFirstChild(item.type == "Slap" and "SlapCount" or "ShieldCount")
+		if count then
+			count.Value = count.Value + 1
+		end
+	else
+		local newTool = originalTool:Clone()
+		local level = newTool:FindFirstChild(item.type == "Slap" and "SlapLevel" or "ShieldLevel")
+		if level then
+			level.Value = item.level
+		end
+		newTool.Parent = player.Backpack
+	end
+end)

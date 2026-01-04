@@ -1,0 +1,16 @@
+local ShopConfig = {
+	-- 巴掌五级
+	{id = 1, name = "巴掌1级", price = 100, type = "Slap", level = 1, description = "扇飞3m"},
+	{id = 2, name = "巴掌2级", price = 200, type = "Slap", level = 2, description = "扇飞6m"},
+	{id = 3, name = "巴掌3级", price = 400, type = "Slap", level = 3, description = "扇飞9m"},
+	{id = 4, name = "巴掌4级", price = 800, type = "Slap", level = 4, description = "扇飞12m"},
+	{id = 5, name = "巴掌5级", price = 1600, type = "Slap", level = 5, description = "扇飞15m"},
+	-- 护盾五级
+	{id = 6, name = "护盾1级", price = 150, type = "Shield", level = 1, description = "无敌3s"},
+	{id = 7, name = "护盾2级", price = 300, type = "Shield", level = 2, description = "无敌3.5s"},
+	{id = 8, name = "护盾3级", price = 600, type = "Shield", level = 3, description = "无敌4s"},
+	{id = 9, name = "护盾4级", price = 1200, type = "Shield", level = 4, description = "无敌4.5s"},
+	{id = 10, name = "护盾5级", price = 2400, type = "Shield", level = 5, description = "无敌5s"},
+}
+
+return ShopConfig
