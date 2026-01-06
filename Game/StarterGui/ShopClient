@@ -1,0 +1,92 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ShopConfig = require(ReplicatedStorage:WaitForChild("ShopConfig"))
+
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
+
+local OpenShopEvent = ReplicatedStorage:WaitForChild("OpenShopEvent")
+local BuyItemEvent = ReplicatedStorage:WaitForChild("BuyItemEvent")
+
+local ShopUI = nil
+
+local function CreateShopUI()
+	if ShopUI then ShopUI:Destroy() end
+
+	ShopUI = Instance.new("ScreenGui")
+	ShopUI.Name = "ShopUI"
+	ShopUI.Parent = PlayerGui
+
+	local Frame = Instance.new("Frame")
+	Frame.Size = UDim2.new(0, 400, 0, 500)
+	Frame.Position = UDim2.new(0.5, -200, 0.5, -250)
+	Frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	Frame.Parent = ShopUI
+
+	local Title = Instance.new("TextLabel")
+	Title.Text = "道具商店"
+	Title.Size = UDim2.new(1, 0, 0, 50)
+	Title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	Title.TextColor3 = Color3.new(1,1,1)
+	Title.Font = Enum.Font.GothamBold
+	Title.TextSize = 30
+	Title.Parent = Frame
+
+	local CloseButton = Instance.new("TextButton")
+	CloseButton.Text = "X"
+	CloseButton.Size = UDim2.new(0, 50, 0, 50)
+	CloseButton.Position = UDim2.new(1, -50, 0, 0)
+	CloseButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+	CloseButton.Parent = Frame
+	CloseButton.MouseButton1Click:Connect(function()
+		ShopUI:Destroy()
+	end)
+
+	local yPos = 60
+	for toolType, config in pairs(ShopConfig) do
+		local tool = player.Backpack:FindFirstChild(toolType) or (player.Character and player.Character:FindFirstChild(toolType))
+		local currentLevel = 1
+		if tool then
+			local levelValue = tool:FindFirstChild(toolType .. "Level")
+			if levelValue then currentLevel = levelValue.Value end
+		end
+
+		local toolFrame = Instance.new("Frame")
+		toolFrame.Size = UDim2.new(1, -20, 0, 150)
+		toolFrame.Position = UDim2.new(0, 10, 0, yPos)
+		toolFrame.BackgroundTransparency = 0.5
+		toolFrame.Parent = Frame
+
+		local nameLabel = Instance.new("TextLabel")
+		nameLabel.Text = toolType .. " 当前 Lv." .. currentLevel
+		nameLabel.Size = UDim2.new(1, 0, 0, 40)
+		nameLabel.TextSize = 25
+		nameLabel.Parent = toolFrame
+
+		if currentLevel >= config.MaxLevel then
+			local maxLabel = Instance.new("TextLabel")
+			maxLabel.Text = "已满级！"
+			maxLabel.TextColor3 = Color3.new(0,1,0)
+			maxLabel.Position = UDim2.new(0.5, -100, 0.5, -20)
+			maxLabel.Parent = toolFrame
+		else
+			local nextLevel = currentLevel + 1
+			local price = config.Levels[nextLevel].Price
+
+			local buyBtn = Instance.new("TextButton")
+			buyBtn.Text = "升级到 Lv." .. nextLevel .. " (" .. price .. " 金币)"
+			buyBtn.Size = UDim2.new(0.8, 0, 0, 50)
+			buyBtn.Position = UDim2.new(0.1, 0, 0.5, -25)
+			buyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+			buyBtn.Parent = toolFrame
+
+			buyBtn.MouseButton1Click:Connect(function()
+				BuyItemEvent:FireServer(toolType, nextLevel)
+			end)
+		end
+
+		yPos = yPos + 160
+	end
+end
+
+OpenShopEvent.OnClientEvent:Connect(CreateShopUI)

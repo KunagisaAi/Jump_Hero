@@ -1,0 +1,175 @@
+-- PlatformMoneyAwarder
+local REMOTE_EVENT = game:GetService("ReplicatedStorage"):WaitForChild("AwardMoney")
+local MESSAGE_EVENT = game:GetService("ReplicatedStorage"):WaitForChild("PlatformLandMessage")
+
+local lastPreciseLand = {}
+-- 新增：记录每个玩家已经触发过的平台
+local playerTriggeredPlatforms = {}
+
+local function calculateMoney(platform, rootPos)
+	local center = platform.Position
+
+	-- 尝试使用自定义中心点
+	local landingCenter = platform:FindFirstChild("LandingCenter")
+	if landingCenter and landingCenter:IsA("Attachment") then
+		center = landingCenter.WorldPosition
+	end
+
+	-- 尝试获取自定义判定半径，如果没有则使用默认计算
+	local customRadius = platform:GetAttribute("LandingRadius")
+	local radius
+
+	if customRadius then
+		radius = customRadius
+	else
+		local platformSize = platform.Size
+
+		-- UnionOperation没有Shape属性，所以需要特殊处理
+		if platform:IsA("UnionOperation") then
+			-- 检查是否是三角形UnionOperation
+			local isTriangle = platform:GetAttribute("IsTriangle") or 
+				string.find(string.lower(platform.Name), "triangle") ~= nil
+
+			if isTriangle then
+				-- 三角形UnionOperation：使用Y轴作为直径
+				radius = platformSize.Y / 2
+			else
+				-- 其他UnionOperation：使用X和Z方向的最大值作为直径
+				radius = math.max(platformSize.X, platformSize.Z) / 2
+			end
+		else
+			local shape = platform.Shape
+
+			-- 使用Y轴作为直径的平台类型
+			if shape == Enum.PartType.Ball or shape == Enum.PartType.Cylinder or shape == Enum.PartType.Wedge then
+				-- 球体、圆柱体和楔形（三角形）平台：使用Y轴作为直径
+				radius = platformSize.Y / 2
+			else
+				-- 其他平台（主要是方块）：使用X轴作为直径
+				radius = platformSize.X / 2
+			end
+		end
+	end
+
+	-- 计算距离
+	local dist
+	if platform:IsA("UnionOperation") then
+		-- UnionOperation使用2D距离（忽略Y轴）
+		dist = (Vector3.new(rootPos.X, center.Y, rootPos.Z) - Vector3.new(center.X, center.Y, center.Z)).Magnitude
+	elseif platform.Shape == Enum.PartType.Ball then
+		dist = (rootPos - center).Magnitude -- 球形需要3D距离
+	else
+		dist = (Vector3.new(rootPos.X, center.Y, rootPos.Z) - Vector3.new(center.X, center.Y, center.Z)).Magnitude
+	end
+
+	-- 计算三分之一和三分之二半径
+	local oneThirdRadius = radius / 3
+	local twoThirdsRadius = radius * 2 / 3
+
+	local money = 25  -- 默认奖励
+	local message = "GOOD"
+	local isPrecise = false
+
+	if dist <= oneThirdRadius then
+		-- 精准降落：距离中心 <= 1/3半径
+		money = 100
+		message = "PERFECT"
+		isPrecise = true
+	elseif dist <= twoThirdsRadius then
+		-- 良好降落：距离中心 <= 2/3半径
+		money = 50
+		message = "GREAT"
+	else
+		-- 普通降落：在平台上但距离中心 > 2/3半径
+		money = 25
+		message = "GOOD"
+	end
+
+	return money, message, isPrecise
+end
+
+local function onCharacterAdded(character, player)
+	character:WaitForChild("HumanoidRootPart")
+	local lastPlatform = nil
+
+	character.HumanoidRootPart.Touched:Connect(function(hit)
+		-- 处理Block平台（包括Part和UnionOperation）
+		if (hit:IsA("Part") or hit:IsA("UnionOperation")) and hit.Name == "Block" then
+			-- 检查是否重复触发（Baseplate不需要此检查）
+			if lastPlatform == hit then return end
+			lastPlatform = hit
+
+			-- 检查这个平台是否已经被该玩家触发过
+			if not playerTriggeredPlatforms[player] then
+				playerTriggeredPlatforms[player] = {}
+			end
+
+			-- 使用平台实例作为键，避免重复触发
+			if playerTriggeredPlatforms[player][hit] then
+				return -- 这个平台已经被触发过，不再触发
+			end
+
+			-- 标记这个平台为已触发
+			playerTriggeredPlatforms[player][hit] = true
+
+			local rootPos = character.HumanoidRootPart.Position
+			local money, message, isPrecise = calculateMoney(hit, rootPos)
+
+			-- 检查是否连续精准降落（仅对Block平台）
+			if lastPreciseLand[player] and isPrecise then
+				money = money * 2
+			end
+			lastPreciseLand[player] = isPrecise
+
+			-- 新内容
+			local moneyValue = player.leaderstats:FindFirstChild("Money")
+			if moneyValue then
+				moneyValue.Value = moneyValue.Value + money
+			end
+
+			REMOTE_EVENT:FireClient(player, money)
+			MESSAGE_EVENT:FireClient(player, message)
+
+			-- 处理Baseplate平台（包括Part和UnionOperation）
+		elseif (hit:IsA("Part") or hit:IsA("UnionOperation")) and hit.Name == "Baseplate" then
+			-- Baseplate可以重复触发，不检查lastPlatform
+			MESSAGE_EVENT:FireClient(player, "BAD")
+			-- Baseplate不给金钱奖励
+		end
+	end)
+end
+
+local Players = game:GetService("Players")
+
+-- 玩家离开游戏时清理记录
+local function onPlayerRemoving(player)
+	playerTriggeredPlatforms[player] = nil
+	lastPreciseLand[player] = nil
+end
+
+Players.PlayerAdded:Connect(function(player)
+	-- 初始化玩家的触发记录
+	playerTriggeredPlatforms[player] = {}
+
+	player.CharacterAdded:Connect(function(character)
+		onCharacterAdded(character, player)
+	end)
+
+	-- 监听玩家离开
+	player:GetPropertyChangedSignal("Parent"):Connect(function()
+		if not player.Parent then
+			onPlayerRemoving(player)
+		end
+	end)
+end)
+
+-- 为已存在的玩家设置
+for _, player in Players:GetPlayers() do
+	playerTriggeredPlatforms[player] = {}
+	player.CharacterAdded:Connect(function(character)
+		onCharacterAdded(character, player)
+	end)
+end
+
+-- 监听玩家离开
+Players.PlayerRemoving:Connect(onPlayerRemoving)

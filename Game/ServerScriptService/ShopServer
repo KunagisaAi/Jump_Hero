@@ -1,0 +1,62 @@
+-- ServerScriptService/ShopServer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+local ShopConfig = require(ReplicatedStorage:WaitForChild("ShopConfig"))
+
+local BuyItemEvent = ReplicatedStorage:FindFirstChild("BuyItemEvent")
+if not BuyItemEvent then
+	BuyItemEvent = Instance.new("RemoteEvent")
+	BuyItemEvent.Name = "BuyItemEvent"
+	BuyItemEvent.Parent = ReplicatedStorage
+end
+
+local function FindPlayerTool(player, toolType)
+	local backpack = player.Backpack
+	local character = player.Character
+
+	if character then
+		for _, tool in ipairs(character:GetChildren()) do
+			if tool.Name == toolType then
+				return tool
+			end
+		end
+	end
+
+	return backpack:FindFirstChild(toolType)
+end
+
+BuyItemEvent.OnServerEvent:Connect(function(player, toolType, requestedLevel)
+	local config = ShopConfig[toolType]
+	if not config then return end
+
+	local tool = FindPlayerTool(player, toolType)
+	if not tool then
+		local template = ServerStorage:FindFirstChild(toolType)
+		if template then
+			tool = template:Clone()
+			tool.Parent = player.Backpack
+		else
+			return
+		end
+	end
+
+	local levelValue = tool:FindFirstChild(toolType .. "Level")
+	if not levelValue then return end
+
+	local currentLevel = levelValue.Value
+	local targetLevel = currentLevel + 1
+
+	if currentLevel >= config.MaxLevel then return end
+	if requestedLevel ~= targetLevel then return end  -- 防作弊
+
+	local price = config.Levels[targetLevel].Price
+
+	local moneyValue = player.leaderstats:FindFirstChild("Money")
+	if not moneyValue or moneyValue.Value < price then return end
+
+	-- 服务器真实扣钱
+	moneyValue.Value = moneyValue.Value - price
+
+	-- 升级
+	levelValue.Value = targetLevel
+end)

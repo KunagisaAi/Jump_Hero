@@ -1,16 +1,27 @@
-local ShopConfig = {
-	-- 巴掌五级
-	{id = 1, name = "巴掌1级", price = 100, type = "Slap", level = 1, description = "扇飞3m"},
-	{id = 2, name = "巴掌2级", price = 200, type = "Slap", level = 2, description = "扇飞6m"},
-	{id = 3, name = "巴掌3级", price = 400, type = "Slap", level = 3, description = "扇飞9m"},
-	{id = 4, name = "巴掌4级", price = 800, type = "Slap", level = 4, description = "扇飞12m"},
-	{id = 5, name = "巴掌5级", price = 1600, type = "Slap", level = 5, description = "扇飞15m"},
-	-- 护盾五级
-	{id = 6, name = "护盾1级", price = 150, type = "Shield", level = 1, description = "无敌3s"},
-	{id = 7, name = "护盾2级", price = 300, type = "Shield", level = 2, description = "无敌3.5s"},
-	{id = 8, name = "护盾3级", price = 600, type = "Shield", level = 3, description = "无敌4s"},
-	{id = 9, name = "护盾4级", price = 1200, type = "Shield", level = 4, description = "无敌4.5s"},
-	{id = 10, name = "护盾5级", price = 2400, type = "Shield", level = 5, description = "无敌5s"},
+-- ReplicatedStorage/ShopConfig
+return {
+	SlapTool = {
+		MaxLevel = 5,
+		BaseCount = 10,  -- 默认次数
+		BaseRange = 3,  -- 巴掌基础距离（米/级）
+		Levels = {
+			[1] = {Price = 0, ExtraRange = 0},     -- 默认免费
+			[2] = {Price = 100, ExtraRange = 1.5},
+			[3] = {Price = 300, ExtraRange = 3},
+			[4] = {Price = 600, ExtraRange = 4.5},
+			[5] = {Price = 1000, ExtraRange = 6},
+		}
+	},
+	ShieldTool = {
+		MaxLevel = 5,
+		BaseCount = 10,
+		BaseDuration = 3,  -- 护盾基础时间（秒）
+		Levels = {
+			[1] = {Price = 0, ExtraDuration = 0},
+			[2] = {Price = 150, ExtraDuration = 0.5},
+			[3] = {Price = 400, ExtraDuration = 1.0},
+			[4] = {Price = 800, ExtraDuration = 1.5},
+			[5] = {Price = 1300, ExtraDuration = 2.0},
+		}
+	}
 }
-
-return ShopConfig

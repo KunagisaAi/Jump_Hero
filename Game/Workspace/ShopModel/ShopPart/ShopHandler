@@ -1,0 +1,10 @@
+local ProximityPrompt = script.Parent:WaitForChild("ProximityPrompt")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local OpenShopEvent = Instance.new("RemoteEvent")
+OpenShopEvent.Name = "OpenShopEvent"
+OpenShopEvent.Parent = ReplicatedStorage
+
+ProximityPrompt.Triggered:Connect(function(player)
+	OpenShopEvent:FireClient(player)
+end)

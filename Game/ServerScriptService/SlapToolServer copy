@@ -1,0 +1,87 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
+local Players = game:GetService("Players")
+
+-- 创建 RemoteEvent（全局，只一次）
+local SlapEvent = ReplicatedStorage:FindFirstChild("SlapEvent")
+if not SlapEvent then
+	SlapEvent = Instance.new("RemoteEvent")
+	SlapEvent.Name = "SlapEvent"
+	SlapEvent.Parent = ReplicatedStorage
+end
+
+-- 辅助函数：找指定玩家的 ShieldTool（装备或背包）
+local function FindPlayerSlapTool(player)
+	local character = player.Character
+	local backpack = player.Backpack
+
+	-- 优先装备中
+	if character then
+		for _, tool in ipairs(character:GetChildren()) do
+			if tool:IsA("Tool") and tool:FindFirstChild("SlapCount") then
+				return tool
+			end
+		end
+	end
+
+	-- 再背包
+	for _, tool in ipairs(backpack:GetChildren()) do
+		if tool:IsA("Tool") and tool:FindFirstChild("SlapCount") then
+			return tool
+		end
+	end
+
+	return nil
+end
+
+-- 击飞处理（每个玩家独立！）
+local function OnSlap(player)
+	local playerTool = FindPlayerSlapTool(player)
+	if not playerTool then return end
+
+	local SlapCount = playerTool:FindFirstChild("SlapCount")
+	local SlapLevel = playerTool:FindFirstChild("SlapLevel")
+	if not SlapCount or not SlapLevel or SlapCount.Value <= 0 then return end
+
+	-- 只修改当前玩家的次数
+	SlapCount.Value = SlapCount.Value - 1
+
+	local Range = 3 + 1.5 * (SlapLevel.Value - 1) -- 撞飞*米
+	local Character = player.Character
+	if not Character then return end
+	local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
+	if not HumanoidRootPart then return end
+	local Origin = HumanoidRootPart.Position
+
+	local OverlapParams = OverlapParams.new()
+	OverlapParams.FilterType = Enum.RaycastFilterType.Exclude
+	OverlapParams.FilterDescendantsInstances = {Character}
+	OverlapParams.MaxParts = 50
+
+	local PartsInRadius = workspace:GetPartBoundsInRadius(Origin, Range, OverlapParams)
+
+	for _, Part in ipairs(PartsInRadius) do
+		local OtherCharacter = Part:FindFirstAncestorWhichIsA("Model")
+		if OtherCharacter and OtherCharacter ~= Character and OtherCharacter:FindFirstChild("Humanoid") then
+			-- 新增：免疫护盾玩家
+			local otherShieldActive = OtherCharacter:FindFirstChild("ShieldActive")
+			if otherShieldActive then continue end  -- 跳过护盾玩家！
+			
+			local OtherCharacter = Part:FindFirstAncestorWhichIsA("Model")
+			if OtherCharacter and OtherCharacter ~= Character and OtherCharacter:FindFirstChild("Humanoid") then
+				local OtherRootPart = OtherCharacter:FindFirstChild("HumanoidRootPart")
+				if OtherRootPart then
+					local KnockbackDirection = (OtherRootPart.Position - Origin).Unit
+					local KnockbackPower = Range * 50
+					local BodyVelocity = Instance.new("BodyVelocity")
+					BodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+					BodyVelocity.Velocity = KnockbackDirection * KnockbackPower + Vector3.new(0, 50, 0)
+					BodyVelocity.Parent = OtherRootPart
+					Debris:AddItem(BodyVelocity, 0.3)
+				end
+			end
+		end
+	end
+end
+
+SlapEvent.OnServerEvent:Connect(OnSlap)
