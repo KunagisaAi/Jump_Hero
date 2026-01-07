@@ -7,6 +7,6 @@ Players.PlayerAdded:Connect(function(player)
 
 	local money = Instance.new("IntValue")
 	money.Name = "Money"
-	money.Value = 100  -- 初始0（或100测试）
+	money.Value = 1000  -- 初始0（或100测试）
 	money.Parent = leaderstats
 end)
