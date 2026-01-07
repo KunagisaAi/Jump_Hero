@@ -56,7 +56,43 @@ SlapTool (Tool)
 这是我的ShieldToolLocal:
 ↑Player.CharacterRemoving:Connect(CleanupTool)这行代码无效，如果有请不要使用
 
+你好，现在我要制作商店，以下是我的思路：
+ 【道具级别规则】道具有五级，每一级的价格不同，效果强度不同，玩家可以消耗金币购买道具。巴掌扇飞距离不同，护盾持续时间不同。
+【商店互动规则】有模型，跑过去按E互动，手机上点击互动，互动后打开商店界面。
+【商品购买规则】花费金币得到对应的商品。
+【商品配置规则】需要配置表里配置物品ID和价格等等。我已经有金币系统了，这是我的MoneyDisplayClient，他里面有两种货币的显示与值：
+然后这是我的PlatformMoneyAwarder，他是获得金币的方式:PlatformMoneyAwarder代码
+↑请注意是否会把ShieldTool等文件名字写错
 
+很好，我去试玩了，不知道为什么购买东西的时候没有扣除金钱，并且我想等级只能购买当前更到一级，满级则无法继续升级。
+我照了你的做，现在连商店都打不开了呜呜呜：
+Infinite yield possible on 'ReplicatedStorage:WaitForChild("BuyItemEvent")'
+Script 'ServerScriptService.ShopServer', Line 5
+↑唐，看着办吧
+
+不扣钱，等级也不提升
+
+当我未持有道具的时候能购买，有道具想升级却升级不了，金币也不扣，请帮我看看是不是有哪些函数废弃了
+
+我已经有MoneyManager了，这是我的PlatformMoneyAwarder：
+
+我去，成功了，除了能在商店升级，我还想能购买道具，获得道具与升级道具分开卖（按钮也分开按），并且现在遇到了新问题，购买升级后商店显示的仍然是升级到Lv2
+
+他们不是一起卖，而是单独分开卖，购买道具单独一个按钮，升级道具又是单独一个按钮，每次购买道具后玩家的该道具数量加一，每次升级道具后玩家的该种类道具等级永久提升一
+
+现在升级道具不能按了没有用，购买道具只有未持有道具时购买增加数量，再次购买只扣钱不加数量，并且商店的关闭按钮不见了
+
+我生气了，我怀疑这个ShopServer问题非常大，没有道具时购买道具应该要扣钱，但这里不扣；有道具时购买道具了扣钱了，但是道具数量并没有增加；有道具升级，没有扣钱也没有升级；请仔细检查一下是不是说明函数废弃了或者无效：
+↑这个自己解决了，原因是（Name 可能 "ShieldLevel" 而不是 "ShieldToolLevel"），对的，我写这个一直都没加Tool
+
+我检查了一下，在购买道具（buyCount）时运行if countValue then这行时出现了问题，在升级（upgrade）时，运行到if not tool or not levelValue then return end这行时出现了问题
+是的，我的道具ShieldTool结构下的类型Count叫ShieldCount，等级类型叫ShieldLevel，道具SlapTool则是Count叫SlapCount，等级类型叫SlapLevel
+↑如果解决了就不理他
+
+芜湖，哦耶，真的没问题了耶，可是我想方便一点，说不定以后还会添加道具，但格式都会是一样的，道具名称后面加Count或者Level
+↑方便的话就统一一下格式吧
+
+我勒个豆，这真的太好了，现在就差商店页面，我即使升级了里面的提示仍然显示“升级等级Lv.2，100金币”，下面是我的ShopClient代码：
 
 
 

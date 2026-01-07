@@ -5,8 +5,6 @@ local StarterGui = game:GetService("StarterGui")
 local REMOTE_EVENT = ReplicatedStorage:WaitForChild("AwardMoney")
 local player = Players.LocalPlayer
 
-local money = 0
-
 -- 创建左上角UI
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MoneyDisplay"
@@ -89,11 +87,20 @@ roboxLabel.Parent = roboxContainer
 
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
-local function updateMoney(amount)
-	money = money + amount
-	if money < 0 then money = 0 end
-	moneyLabel.Text = "金钱: " .. money
-end
+-- 新内容
+local leaderstats = player:WaitForChild("leaderstats")
+local moneyValue = leaderstats:WaitForChild("Money")
+
+moneyLabel.Text = "金钱: " .. moneyValue.Value
+
+moneyValue.Changed:Connect(function(newValue)
+	moneyLabel.Text = "金钱: " .. newValue
+end)
+
+-- REMOTE_EVENT.OnClientEvent 保留（兼容旧加钱）
+REMOTE_EVENT.OnClientEvent:Connect(function(amount)
+	-- 无需本地加，leaderstats 已同步
+end)
 
 -- Robox充值函数
 local function addRobox(amount)
@@ -101,7 +108,3 @@ local function addRobox(amount)
 	if roboxBalance < 0 then roboxBalance = 0 end
 	roboxLabel.Text = "Robox: " .. roboxBalance
 end
-
-REMOTE_EVENT.OnClientEvent:Connect(function(amount)
-	updateMoney(amount)
-end)

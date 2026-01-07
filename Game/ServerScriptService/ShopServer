@@ -1,4 +1,4 @@
--- ServerScriptService/ShopServer（分开购买道具/次数/升级 + 刷新）
+-- ServerScriptService/ShopServer（兼容你的 Name 格式 + 分开购买/次数/升级 + 刷新）
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local ShopConfig = require(ReplicatedStorage:WaitForChild("ShopConfig"))
@@ -38,58 +38,96 @@ BuyItemEvent.OnServerEvent:Connect(function(player, toolType, action)  -- action
 
 	local tool = FindPlayerTool(player, toolType)
 
-	local countValue = tool and (tool:FindFirstChild(toolType .. "Count") or tool:FindFirstChild("Count"))
-	local levelValue = tool and (tool:FindFirstChild(toolType .. "Level") or tool:FindFirstChild("Level"))
+	-- 智能兼容 Name（去 "Tool" 后缀 + "Count"/"Level"）
+	local baseName = string.gsub(toolType, "Tool", "")  -- "SlapTool" → "Slap"
+	local countValue = tool and (tool:FindFirstChild(baseName .. "Count") or tool:FindFirstChild("Count"))
+	local levelValue = tool and (tool:FindFirstChild(baseName .. "Level") or tool:FindFirstChild("Level"))
 
 	local moneyValue = player.leaderstats:FindFirstChild("Money")
 	if not moneyValue then return end
 
 	if action == "buyTool" then
-		-- 首次购买道具（给道具 + 默认次数 + Lv.1）
-		if tool then return end  -- 已持有，不重复
+		-- 首次买道具（未持有扣钱给 + 默认）
+		if tool then 
+			print(player.Name .. " 已持有 " .. toolType .. "，不重复买道具")
+			return 
+		end
+
+		local price = config.BuyCountPrice
+		if moneyValue.Value < price then 
+			print(player.Name .. " 金币不足 " .. price)
+			return 
+		end
+
+		moneyValue.Value = moneyValue.Value - price
 
 		local template = ServerStorage:FindFirstChild(toolType)
-		if not template then return end
+		if not template then 
+			warn("商店错误：ServerStorage 没 " .. toolType)
+			return 
+		end
 
 		tool = template:Clone()
 		tool.Parent = player.Backpack
 
-		-- 默认次数
-		countValue = tool:FindFirstChild(toolType .. "Count") or tool:FindFirstChild("Count")
+		countValue = tool:FindFirstChild(baseName .. "Count") or tool:FindFirstChild("Count")
 		if countValue then countValue.Value = config.BaseCount end
 
-		-- 默认等级
-		levelValue = tool:FindFirstChild(toolType .. "Level") or tool:FindFirstChild("Level")
+		levelValue = tool:FindFirstChild(baseName .. "Level") or tool:FindFirstChild("Level")
 		if levelValue then levelValue.Value = 1 end
 
 		RefreshShopEvent:FireClient(player)
 
 	elseif action == "buyCount" then
-		-- 购买次数 (+1 Count)
-		if not tool then return end
+		-- 买次数（有道具扣钱 +1 Count）
+		if not tool then 
+			print(player.Name .. " 没 " .. toolType .. "，不能买次数")
+			return 
+		end
 
 		local price = config.BuyCountPrice
-		if moneyValue.Value < price then return end
+		if moneyValue.Value < price then 
+			print(player.Name .. " 金币不足 " .. price)
+			return 
+		end
 
 		moneyValue.Value = moneyValue.Value - price
 
+		countValue = tool:FindFirstChild(baseName .. "Count") or tool:FindFirstChild("Count")
 		if countValue then
 			countValue.Value = countValue.Value + 1
+		else
+			warn("警告：没找到 " .. toolType .. " 的 Count Value")
 		end
 
 		RefreshShopEvent:FireClient(player)
 
 	elseif action == "upgrade" then
-		-- 升级等级 (+1 Level)
-		if not tool or not levelValue then return end
+		-- 升级等级（有道具扣钱 +1 Level）
+		if not tool then 
+			print(player.Name .. " 没 " .. toolType .. "，不能升级")
+			return 
+		end
+
+		levelValue = tool:FindFirstChild(baseName .. "Level") or tool:FindFirstChild("Level")
+		if not levelValue then 
+			warn("警告：没找到 " .. toolType .. " 的 Level Value")
+			return 
+		end
 
 		local currentLevel = levelValue.Value
-		if currentLevel >= config.MaxLevel then return end
+		if currentLevel >= config.MaxLevel then 
+			print(player.Name .. " 已满级")
+			return 
+		end
 
 		local targetLevel = currentLevel + 1
 		local price = config.Levels[targetLevel].UpgradePrice
 
-		if moneyValue.Value < price then return end
+		if moneyValue.Value < price then 
+			print(player.Name .. " 金币不足 " .. price)
+			return 
+		end
 
 		moneyValue.Value = moneyValue.Value - price
 		levelValue.Value = targetLevel

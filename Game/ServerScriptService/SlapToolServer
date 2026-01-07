@@ -46,7 +46,7 @@ local function OnSlap(player)
 	-- 只修改当前玩家的次数
 	SlapCount.Value = SlapCount.Value - 1
 
-	local Range = 3 * SlapLevel.Value -- 撞飞3米
+	local Range = 3 + 1.5 * (SlapLevel.Value - 1) -- 撞飞*米
 	local Character = player.Character
 	if not Character then return end
 	local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")

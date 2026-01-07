@@ -2,8 +2,8 @@
 return {
 	SlapTool = {
 		MaxLevel = 5,
-		BaseCount = 10,  -- 默认次数
-		BaseRange = 20,  -- 巴掌基础距离
+		BaseCount = 1,  -- 默认次数
+		BaseRange = 3,  -- 巴掌基础距离
 		BuyCountPrice = 50,  -- 每次购买次数的价格（+1 Count）
 		Levels = {
 			[1] = {UpgradePrice = 0},     -- Lv.1 免费（初始）
@@ -15,7 +15,7 @@ return {
 	},
 	ShieldTool = {
 		MaxLevel = 5,
-		BaseCount = 10,
+		BaseCount = 1,
 		BaseDuration = 3,
 		BuyCountPrice = 60,  -- 护盾购买次数价格
 		Levels = {

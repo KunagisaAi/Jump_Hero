@@ -121,6 +121,12 @@ local function onCharacterAdded(character, player)
 			end
 			lastPreciseLand[player] = isPrecise
 
+			-- 新内容
+			local moneyValue = player.leaderstats:FindFirstChild("Money")
+			if moneyValue then
+				moneyValue.Value = moneyValue.Value + money
+			end
+
 			REMOTE_EVENT:FireClient(player, money)
 			MESSAGE_EVENT:FireClient(player, message)
 
