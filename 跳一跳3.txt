@@ -93,6 +93,7 @@ Script 'ServerScriptService.ShopServer', Line 5
 ↑方便的话就统一一下格式吧
 
 我勒个豆，这真的太好了，现在就差商店页面，我即使升级了里面的提示仍然显示“升级等级Lv.2，100金币”，下面是我的ShopClient代码：
+↑修好之前的bug同步一下就好看，问题跟上面那个ToolLevel一样
 
-
+我复制了一个商店的模型（包括里面包含的东西，如ShopPart，ShopHandler），但是在测试的时候，复制出来的点击后没有任何反应
 

@@ -1,10 +1,16 @@
+-- 记得调整属性，把行为里的Enabled改为true --
+-- ShopPart 里的 ShopHandler (服务器脚本)
 local ProximityPrompt = script.Parent:WaitForChild("ProximityPrompt")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local OpenShopEvent = Instance.new("RemoteEvent")
-OpenShopEvent.Name = "OpenShopEvent"
-OpenShopEvent.Parent = ReplicatedStorage
+-- 确保 OpenShopEvent 存在
+local OpenShopEvent = ReplicatedStorage:FindFirstChild("OpenShopEvent")
+if not OpenShopEvent then
+    OpenShopEvent = Instance.new("RemoteEvent")
+    OpenShopEvent.Name = "OpenShopEvent"
+    OpenShopEvent.Parent = ReplicatedStorage
+end
 
 ProximityPrompt.Triggered:Connect(function(player)
-	OpenShopEvent:FireClient(player)
+    OpenShopEvent:FireClient(player)
 end)
