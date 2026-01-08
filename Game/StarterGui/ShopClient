@@ -1,4 +1,4 @@
--- StarterPlayerScripts/ShopClient（分开按钮 + 关闭按钮 + 刷新）
+-- StarterPlayerScripts/ShopClient（UI动态显示 + 按钮文本更新 + 关闭按钮）
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ShopConfig = require(ReplicatedStorage:WaitForChild("ShopConfig"))
@@ -35,7 +35,7 @@ local function CreateShopUI()
 	Title.TextSize = 30
 	Title.Parent = Frame
 
-	-- **关闭按钮（修复不见问题）**
+	-- 关闭按钮
 	local CloseButton = Instance.new("TextButton")
 	CloseButton.Text = "X"
 	CloseButton.Size = UDim2.new(0, 50, 0, 50)
@@ -52,13 +52,17 @@ local function CreateShopUI()
 	local yPos = 60
 	for toolType, config in pairs(ShopConfig) do
 		local tool = player.Backpack:FindFirstChild(toolType) or (player.Character and player.Character:FindFirstChild(toolType))
+
+		-- 智能 baseName
+		local baseName = string.gsub(toolType, "Tool$", "")
+
 		local currentCount = config.BaseCount
 		local currentLevel = 1
 		if tool then
-			local countValue = tool:FindFirstChild(toolType .. "Count") or tool:FindFirstChild("Count")
+			local countValue = tool:FindFirstChild(baseName .. "Count")
 			if countValue then currentCount = countValue.Value end
 
-			local levelValue = tool:FindFirstChild(toolType .. "Level") or tool:FindFirstChild("Level")
+			local levelValue = tool:FindFirstChild(baseName .. "Level")
 			if levelValue then currentLevel = levelValue.Value end
 		end
 
@@ -75,7 +79,6 @@ local function CreateShopUI()
 		nameLabel.Parent = toolFrame
 
 		if not tool then
-			-- 未持有：购买道具
 			local buyBtn = Instance.new("TextButton")
 			buyBtn.Text = "购买道具 (Lv.1 x" .. config.BaseCount .. ")"
 			buyBtn.Size = UDim2.new(0.8, 0, 0, 50)
@@ -86,7 +89,6 @@ local function CreateShopUI()
 				BuyItemEvent:FireServer(toolType, "buyTool")
 			end)
 		else
-			-- 已持有：购买次数
 			local countPrice = config.BuyCountPrice
 			local countBtn = Instance.new("TextButton")
 			countBtn.Text = "购买次数 (+1, " .. countPrice .. " 金币)"
@@ -98,7 +100,6 @@ local function CreateShopUI()
 				BuyItemEvent:FireServer(toolType, "buyCount")
 			end)
 
-			-- 升级等级
 			if currentLevel < config.MaxLevel then
 				local nextLevel = currentLevel + 1
 				local upgradePrice = config.Levels[nextLevel].UpgradePrice
@@ -125,4 +126,4 @@ local function CreateShopUI()
 end
 
 OpenShopEvent.OnClientEvent:Connect(CreateShopUI)
-RefreshShopEvent.OnClientEvent:Connect(CreateShopUI)  -- 购买后刷新UI
+RefreshShopEvent.OnClientEvent:Connect(CreateShopUI)  -- 购买/升级后重建UI，文本自动更新下一级
