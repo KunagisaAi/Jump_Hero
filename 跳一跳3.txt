@@ -99,6 +99,8 @@ Script 'ServerScriptService.ShopServer', Line 5
 
 我想设置玩家死亡时（死亡状态）将不会显示道具UI，这是我的SlapToolLocal:以及我的ShieldToolLocal：
 
+我在StarterPlayerScripts中有脚本ChargeBarController，在StarterGui下有JumpUI，里面有Frame叫ChargeBackGround（里面有ImageLabel）和ChargeBarFrame，ChargeBarFrame里面还有Frame叫ChargeBar（里面有ImageLabel），我现在在游戏进行的时候发现蓄力条不向屏幕自动居中
+↑远古不对称的bug还是修了
 
 
 

@@ -9,6 +9,22 @@ local function getChargeBar()
 	return chargeBar
 end
 
+-- ChargeBarController 加这部分（自动居中）
+local playerGui = localPlayer:WaitForChild("PlayerGui")
+local JumpUI = playerGui:WaitForChild("JumpUI")
+local ChargeBackGround = JumpUI:WaitForChild("ChargeBackGround")
+
+ChargeBackGround.AnchorPoint = Vector2.new(0.5, 1)
+ChargeBackGround.Position = UDim2.new(0.5, 0, 1, -50)  -- 底部中心，向上50像素
+
+local ChargeBarFrame = JumpUI:WaitForChild("ChargeBarFrame")
+ChargeBarFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+ChargeBarFrame.Position = UDim2.new(0.5, 0, 0.877, 0)
+
+local ChargeBar = ChargeBarFrame:WaitForChild("ChargeBar")
+ChargeBar.AnchorPoint = Vector2.new(0, 0.5)
+ChargeBar.Position = UDim2.new(0, 0, 0.5, 0)
+
 -- 更新蓄力条显示（percent: 0~1）
 local function updateChargeBar(percent)
 	local chargeBar = getChargeBar()
@@ -30,15 +46,3 @@ end
 
 -- 初始化
 resetChargeBar()
-
---[[
--- 示例：假设每隔0.1秒蓄力增加
-local chargeValue = 0
-local maxCharge = 100
-for i = 1, maxCharge do
-    chargeValue = i
-    updateChargeBar(chargeValue / maxCharge)
-    task.wait(0.1)
-end
---]]
-
