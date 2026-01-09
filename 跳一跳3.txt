@@ -97,3 +97,14 @@ Script 'ServerScriptService.ShopServer', Line 5
 
 我复制了一个商店的模型（包括里面包含的东西，如ShopPart，ShopHandler），但是在测试的时候，复制出来的点击后没有任何反应
 
+我想设置玩家死亡时（死亡状态）将不会显示道具UI，这是我的SlapToolLocal:以及我的ShieldToolLocal：
+
+
+
+
+
+
+
+
+
+现在玩家死亡后道具会消失，等级也会重置，我想玩家升级道具后则是永久升级，不会随着道具消失而消失，道具则是继续保留在装备栏，用完后隐藏不显示

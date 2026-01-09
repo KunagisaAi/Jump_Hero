@@ -10,13 +10,13 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 local ShieldUI = nil
 local animationTrack = nil
 
--- 创建护盾专属 UI（不变）
+-- 创建护盾专属 UI（加 ResetOnSpawn = true）
 local function CreateShieldUI()
 	if ShieldUI then return end
 
 	ShieldUI = Instance.new("ScreenGui")
 	ShieldUI.Name = "ShieldToolUI"
-	ShieldUI.ResetOnSpawn = false
+	ShieldUI.ResetOnSpawn = true  -- 关键：死亡重生清 UI
 	ShieldUI.Parent = PlayerGui
 
 	local MainFrame = Instance.new("Frame")
@@ -157,7 +157,7 @@ local function CleanupTool()
 	end
 end
 
--- **Rebuild 函数（装备时重建 UI + 动画 + 绑定 Died）**
+-- Rebuild 函数（装备时重建 + 绑定 Died）
 local function RebuildUIAndAnimation()
 	CreateShieldUI()
 	UpdateShieldUI()
@@ -172,14 +172,13 @@ local function RebuildUIAndAnimation()
 	Tool.ShieldCount.Changed:Connect(UpdateShieldUI)
 	Tool.ShieldLevel.Changed:Connect(UpdateShieldUI)
 
-	-- **关键：绑定当前 Humanoid 的 Died 事件**
 	local humanoid = Player.Character:FindFirstChild("Humanoid")
 	if humanoid then
 		humanoid.Died:Connect(CleanupTool)
 	end
 end
 
--- 装备时触发 Rebuild
+-- 装备时触发
 Tool.Equipped:Connect(RebuildUIAndAnimation)
 
 -- 数量 <=0 时清理
@@ -202,11 +201,13 @@ Tool.Unequipped:Connect(function()
 	end
 end)
 
--- 复活时重建 + 重新绑定 Died
+-- 全局 Died 绑定 + 复活重建
 Player.CharacterAdded:Connect(function(character)
-	task.wait(1)
-	local equippedTool = character:FindFirstChildWhichIsA("Tool")
-	if equippedTool and equippedTool:FindFirstChild("ShieldCount") then
+	task.wait(0.5)
+	local humanoid = character:WaitForChild("Humanoid")
+	humanoid.Died:Connect(CleanupTool)
+
+	if character:FindFirstChild(Tool.Name) then
 		RebuildUIAndAnimation()
 	end
 end)

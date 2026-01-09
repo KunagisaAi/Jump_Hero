@@ -12,13 +12,13 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 local SlapUI = nil
 local animationTrack = nil  -- 新增：缓存动画Track，只加载一次
 
--- 创建巴掌专属 UI
+-- 创建巴掌专属 UI（加 ResetOnSpawn = true，死亡重生自动清 UI）
 local function CreateSlapUI()
 	if SlapUI then return end
 
 	SlapUI = Instance.new("ScreenGui")
 	SlapUI.Name = "SlapToolUI"
-	SlapUI.ResetOnSpawn = false
+	SlapUI.ResetOnSpawn = true  -- 关键：死亡重生清 UI
 	SlapUI.Parent = PlayerGui
 
 	local MainFrame = Instance.new("Frame")
@@ -166,7 +166,7 @@ local function CleanupTool()
 	end
 end
 
--- 装备时：创建UI + 加载动画Track（只一次）
+-- 装备时：创建UI + 加载动画Track（只一次） + 绑定 Died
 Tool.Equipped:Connect(function()
 	CreateSlapUI()
 	UpdateSlapUI()
@@ -205,5 +205,27 @@ Tool.Unequipped:Connect(function()
 	if animationTrack then
 		animationTrack:Stop()
 		animationTrack = nil
+	end
+end)
+
+-- **全局绑定 Died + 复活重建**
+Player.CharacterAdded:Connect(function(character)
+	task.wait(0.5)  -- 等待加载
+	local humanoid = character:WaitForChild("Humanoid")
+	humanoid.Died:Connect(CleanupTool)
+
+	-- 复活后如果已装备道具，重建 UI
+	if character:FindFirstChild(Tool.Name) then
+		CreateSlapUI()
+		UpdateSlapUI()
+	end
+end)
+
+-- 初始检查
+task.spawn(function()
+	task.wait(2)
+	if Tool.Parent == Player.Character then
+		CreateSlapUI()
+		UpdateSlapUI()
 	end
 end)
