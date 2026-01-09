@@ -1,0 +1,64 @@
+-- ServerScriptService/PropDataManager（等级永久，死亡不重置）
+local DataStoreService = game:GetService("DataStoreService")
+local Players = game:GetService("Players")
+
+local LevelStore = DataStoreService:GetDataStore("PlayerPropLevels")  -- DataStore 名
+
+Players.PlayerAdded:Connect(function(player)
+	local key = "Player_" .. player.UserId
+
+	local success, savedData = pcall(function()
+		return LevelStore:GetAsync(key)
+	end)
+
+	local levels = success and savedData or {SlapLevel = 1, ShieldLevel = 1}
+
+	-- 监听背包/装备加道具，加载保存等级
+	local function loadLevel(tool)
+		if tool.Name == "SlapTool" then
+			local levelValue = tool:FindFirstChild("SlapLevel")
+			if levelValue then levelValue.Value = levels.SlapLevel or 1 end
+		elseif tool.Name == "ShieldTool" then
+			local levelValue = tool:FindFirstChild("ShieldLevel")
+			if levelValue then levelValue.Value = levels.ShieldLevel or 1 end
+		end
+	end
+
+	player.Backpack.ChildAdded:Connect(loadLevel)
+	if player.Character then
+		for _, child in ipairs(player.Character:GetChildren()) do
+			if child:IsA("Tool") then loadLevel(child) end
+		end
+	end
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+	local key = "Player_" .. player.UserId
+
+	local levels = {}
+
+	local function saveLevel(tool)
+		if tool.Name == "SlapTool" then
+			local levelValue = tool:FindFirstChild("SlapLevel")
+			if levelValue then levels.SlapLevel = levelValue.Value end
+		elseif tool.Name == "ShieldTool" then
+			local levelValue = tool:FindFirstChild("ShieldLevel")
+			if levelValue then levels.ShieldLevel = levelValue.Value end
+		end
+	end
+
+	local backpack = player.Backpack
+	for _, tool in ipairs(backpack:GetChildren()) do
+		if tool:IsA("Tool") then saveLevel(tool) end
+	end
+
+	if player.Character then
+		for _, tool in ipairs(player.Character:GetChildren()) do
+			if tool:IsA("Tool") then saveLevel(tool) end
+		end
+	end
+
+	pcall(function()
+		LevelStore:SetAsync(key, levels)
+	end)
+end)
