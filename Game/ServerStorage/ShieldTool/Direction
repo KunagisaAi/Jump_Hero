@@ -1,0 +1,15 @@
+local tool = script.Parent
+
+-- 还原工具位置
+local originalGrip = tool.Grip
+
+tool.Equipped:Connect(function()
+	tool.Grip = originalGrip
+		* CFrame.Angles(0, 0, 0)  -- 翻转
+		* CFrame.new(0, 0, 0.30)                     -- 移动
+end)
+
+-- 放下工具时恢复默认
+tool.Unequipped:Connect(function()
+	tool.Grip = originalGrip
+end)
