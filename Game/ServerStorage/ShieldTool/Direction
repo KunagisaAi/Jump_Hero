@@ -5,7 +5,7 @@ local originalGrip = tool.Grip
 
 tool.Equipped:Connect(function()
 	tool.Grip = originalGrip
-		* CFrame.Angles(0, 0, 0)  -- 翻转
+		* CFrame.Angles(0, 9.5, 0)  -- 翻转
 		* CFrame.new(0, 0, 0.30)                     -- 移动
 end)
 
