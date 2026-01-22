@@ -5,8 +5,8 @@ local originalGrip = tool.Grip
 
 tool.Equipped:Connect(function()
 	tool.Grip = originalGrip
-		* CFrame.Angles(0, math.rad(120), math.rad(90))  -- 翻转
-		* CFrame.new(0, -0.75, 0.25)                     -- 移动
+		* CFrame.Angles(math.rad(20), math.rad(240), math.rad(10))  -- 翻转
+		* CFrame.new(0, -1, 0)                     -- 移动
 end)
 
 -- 放下工具时恢复默认
