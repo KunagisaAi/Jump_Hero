@@ -69,52 +69,18 @@ local function OnShield(player)
 	-- 持续时间
 	local Duration = 3 + 0.5 * (ShieldLevel.Value - 1)
 
-	-- 3个盾牌旋转动画（不变）
-	local Shields = {}
-	local connection
-	local timeStart = tick()
-
-	for i = 1, 3 do
-		local ShieldPart = Instance.new("Part")
-		ShieldPart.Name = "ShieldOrb" .. i
-		ShieldPart.Shape = Enum.PartType.Ball
-		ShieldPart.Size = Vector3.new(2, 2, 2)
-		ShieldPart.Material = Enum.Material.ForceField
-		ShieldPart.BrickColor = BrickColor.new("Bright blue")
-		ShieldPart.CanCollide = false
-		ShieldPart.Anchored = true
-		ShieldPart.Parent = workspace
-
-		table.insert(Shields, ShieldPart)
-	end
-
-	connection = RunService.Heartbeat:Connect(function()
-		local elapsed = tick() - timeStart
-		if elapsed >= Duration then
-			connection:Disconnect()
-			return
-		end
-
-		local RootPart = Character:FindFirstChild("HumanoidRootPart")
-		if not RootPart then return end
-
-		local time = elapsed * 2
-		for i, shield in ipairs(Shields) do
-			local Angle = (time * math.pi * 2 + (i - 1) * 2 * math.pi / 3) % (math.pi * 2)
-			shield.CFrame = RootPart.CFrame * CFrame.new(math.cos(Angle) * 5, 3, math.sin(Angle) * 5)
-		end
-	end)
-
 	-- Duration 后清理
-	task.delay(Duration, function()
-		if ForceField then ForceField:Destroy() end
-		if ShieldActive then ShieldActive:Destroy() end
-		for _, shield in ipairs(Shields) do
-			if shield then shield:Destroy() end
-		end
-		if healthConnection then healthConnection:Disconnect() end
-		connection:Disconnect()
-	end)
+		task.delay(Duration, function()
+        if ForceField and ForceField.Parent then 
+            ForceField:Destroy() 
+        end
+        if ShieldActive and ShieldActive.Parent then 
+            ShieldActive:Destroy() 
+        end
+        if healthConnection then 
+            healthConnection:Disconnect() 
+        end
+    end)
 end
 
 ShieldEvent.OnServerEvent:Connect(OnShield)
