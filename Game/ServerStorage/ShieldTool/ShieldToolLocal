@@ -112,7 +112,7 @@ end
 -- 播放使用反馈（不变）
 local function PlayFeedback()
 	local Sound = Instance.new("Sound")
-	Sound.SoundId = "rbxassetid://138081500"  -- 护盾激活音效
+	Sound.SoundId = "rbxassetid://1835341225"  -- 护盾激活音效
 	Sound.Volume = 0.8
 	Sound.Parent = Tool
 	Sound:Play()
