@@ -52,7 +52,7 @@ local function CreateSlapUI()
 	SlapImage.Size = UDim2.new(0, 80, 0, 80)
 	SlapImage.Position = UDim2.new(0.5, -40, 0.5, -40)
 	SlapImage.BackgroundTransparency = 1
-	SlapImage.Image = "rbxassetid://112838610450276" -- 巴掌图片
+	SlapImage.Image = "rbxassetid://94497172509286" -- 巴掌图片
 	SlapImage.Parent = MainFrame
 
 	local ImageCorner = Instance.new("UICorner")

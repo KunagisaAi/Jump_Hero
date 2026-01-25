@@ -51,7 +51,7 @@ local function CreateShieldUI()
 	ShieldImage.Size = UDim2.new(0, 80, 0, 80)
 	ShieldImage.Position = UDim2.new(0.5, -40, 0.5, -40)
 	ShieldImage.BackgroundTransparency = 1
-	ShieldImage.Image = "rbxassetid://122269719475476"
+	ShieldImage.Image = "rbxassetid://105403420633099"
 	ShieldImage.Parent = MainFrame
 
 	local ImageCorner = Instance.new("UICorner")
