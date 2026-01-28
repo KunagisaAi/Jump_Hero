@@ -1,0 +1,10 @@
+Name = "TooltipLabel"
+Size = UDim2.new(0, 200, 0, 50)  -- 可以根据文字长度调整
+Position = UDim2.new(0, 0, 0, 0)  -- 初始无所谓，会动态移动
+BackgroundColor3 = Color3.new(0, 0, 0)  -- 黑色半透明背景
+BackgroundTransparency = 0.4
+TextColor3 = Color3.new(1, 1, 1)  -- 白色文字
+TextScaled = true  -- 文字自动缩放
+Text = ""  -- 初始为空
+Visible = false  -- 初始隐藏
+ZIndex = 10  -- 确保在最上层

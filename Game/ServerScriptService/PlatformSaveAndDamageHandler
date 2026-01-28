@@ -109,3 +109,44 @@ for i, player in Players:GetPlayers() do
 	end
 end
 
+-- 在脚本最上面（GetService之后）添加
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- 创建RemoteEvent
+local TeleportEvent = ReplicatedStorage:FindFirstChild("TeleportEvent")
+if not TeleportEvent then
+	TeleportEvent = Instance.new("RemoteEvent")
+	TeleportEvent.Name = "TeleportEvent"
+	TeleportEvent.Parent = ReplicatedStorage
+end
+
+-- 主城固定坐标
+local MAIN_CITY_POS = Vector3.new(-2, 0.5, 116.5)
+
+-- 传送函数（复用你已有的getAboveCFrame逻辑）
+local function teleportPlayer(player, targetCFrame)
+	local character = player.Character
+	if not character then return end
+
+	local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+	if not humanoidRootPart then return end
+
+	-- 稍微抬高一点避免卡地
+	local aboveCFrame = CFrame.new(targetCFrame + Vector3.new(0, 5, 0))
+	character:PivotTo(aboveCFrame)
+end
+
+-- RemoteEvent 处理
+TeleportEvent.OnServerEvent:Connect(function(player, teleportType)
+	-- 可选：在这里加服务器端冷却验证（更防作弊），这里简单起见不加
+	if teleportType == "MainCity" then
+		teleportPlayer(player, MAIN_CITY_POS)
+	elseif teleportType == "SavePoint" then
+		-- 复用你已有的getPlayerSpawnPart和getAboveCFrame
+		local spawnPart = getPlayerSpawnPart(player)
+		if spawnPart then
+			local aboveCFrame = getAboveCFrame(spawnPart)
+			teleportPlayer(player, aboveCFrame.Position)  -- 用Position传
+		end
+	end
+end)

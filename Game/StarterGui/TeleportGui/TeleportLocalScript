@@ -1,0 +1,110 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+
+-- RemoteEvent
+local TeleportEvent = ReplicatedStorage:FindFirstChild("TeleportEvent")
+if not TeleportEvent then
+	TeleportEvent = Instance.new("RemoteEvent")
+	TeleportEvent.Name = "TeleportEvent"
+	TeleportEvent.Parent = ReplicatedStorage
+end
+
+local gui = script.Parent
+local toMainCityButton = gui:WaitForChild("ToMainCityButton")
+local toSavePointButton = gui:WaitForChild("ToSavePointButton")
+local tooltip = gui:WaitForChild("TooltipLabel")  -- 新增：Tooltip引用
+
+local COOLDOWN = 3
+local lastTeleportTime = 0
+
+local function canTeleport()
+	return tick() - lastTeleportTime >= COOLDOWN
+end
+
+local function startCooldown()
+	lastTeleportTime = tick()
+end
+
+-- 按住/松开视觉效果（之前的功能）
+local function setupButtonVisual(button)
+	local normalImage = button.Image
+	local pressedImage = button:FindFirstChild("PressedImage")
+	if pressedImage then
+		pressedImage = pressedImage.Value
+	end
+
+	button.MouseButton1Down:Connect(function()
+		if pressedImage then
+			button.Image = pressedImage
+		end
+	end)
+
+	button.MouseButton1Up:Connect(function()
+		button.Image = normalImage
+	end)
+
+	button.MouseLeave:Connect(function()
+		button.Image = normalImage
+	end)
+end
+
+-- 新增：Tooltip显示函数
+local function showTooltip(text, button)
+	tooltip.Text = text
+	tooltip.Visible = true
+
+	-- 动态跟随鼠标（稍微偏移避免遮挡按钮）
+	local mousePos = UserInputService:GetMouseLocation()
+	tooltip.Position = UDim2.new(0, mousePos.X + 10, 0, mousePos.Y + 10)
+end
+
+local function hideTooltip()
+	tooltip.Visible = false
+	tooltip.Text = ""
+end
+
+-- 主城按钮设置
+toMainCityButton.Activated:Connect(function()
+	if not canTeleport() then return end
+	TeleportEvent:FireServer("MainCity")
+	startCooldown()
+end)
+
+toMainCityButton.MouseEnter:Connect(function()
+	showTooltip("传送到主城\n(坐标: -2, 0.5, 116.5)", toMainCityButton)
+end)
+
+toMainCityButton.MouseLeave:Connect(function()
+	hideTooltip()
+end)
+
+setupButtonVisual(toMainCityButton)
+
+-- 存档点按钮设置
+toSavePointButton.Activated:Connect(function()
+	if not canTeleport() then return end
+	TeleportEvent:FireServer("SavePoint")
+	startCooldown()
+end)
+
+toSavePointButton.MouseEnter:Connect(function()
+	showTooltip("传送到上一个存档点", toSavePointButton)
+end)
+
+toSavePointButton.MouseLeave:Connect(function()
+	hideTooltip()
+end)
+
+setupButtonVisual(toSavePointButton)
+
+-- 额外：鼠标移动时持续更新Tooltip位置（让它跟随鼠标更顺滑）
+UserInputService.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		if tooltip.Visible then
+			local mousePos = UserInputService:GetMouseLocation()
+			tooltip.Position = UDim2.new(0, mousePos.X + 10, 0, mousePos.Y + 10)
+		end
+	end
+end)
