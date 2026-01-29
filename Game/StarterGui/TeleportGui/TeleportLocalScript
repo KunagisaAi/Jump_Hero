@@ -73,7 +73,7 @@ toMainCityButton.Activated:Connect(function()
 end)
 
 toMainCityButton.MouseEnter:Connect(function()
-	showTooltip("传送到主城\n(坐标: -2, 0.5, 116.5)", toMainCityButton)
+	showTooltip("Teleport To Maincity", toMainCityButton)
 end)
 
 toMainCityButton.MouseLeave:Connect(function()
@@ -90,7 +90,7 @@ toSavePointButton.Activated:Connect(function()
 end)
 
 toSavePointButton.MouseEnter:Connect(function()
-	showTooltip("传送到上一个存档点", toSavePointButton)
+	showTooltip("Teleport To SavePoint", toSavePointButton)
 end)
 
 toSavePointButton.MouseLeave:Connect(function()
