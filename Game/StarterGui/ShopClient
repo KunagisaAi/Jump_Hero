@@ -6,6 +6,21 @@ local ShopConfig = require(ReplicatedStorage:WaitForChild("ShopConfig"))
 local player = Players.LocalPlayer
 local PlayerGui = player:WaitForChild("PlayerGui")
 
+-- 获取屏幕尺寸，用于适配不同设备
+local function getScreenSize()
+	return workspace.CurrentCamera.ViewportSize
+end
+
+-- 根据屏幕尺寸计算适合的文本大小
+local function getTextSize(baseSize)
+	local screenSize = getScreenSize()
+	-- 以屏幕较短边为基准计算文本大小
+	local minSize = math.min(screenSize.X, screenSize.Y)
+	-- 调整文本大小，确保在小屏幕上也能正常显示
+	local scaleFactor = minSize / 1080 -- 以1080p为基准
+	return math.max(12, math.floor(baseSize * scaleFactor))
+end
+
 local OpenShopEvent = ReplicatedStorage:WaitForChild("OpenShopEvent")
 local BuyItemEvent = ReplicatedStorage:WaitForChild("BuyItemEvent")
 local RefreshShopEvent = ReplicatedStorage:WaitForChild("RefreshShopEvent")
@@ -20,36 +35,40 @@ local function CreateShopUI()
 	ShopUI.Parent = PlayerGui
 
 	local Frame = Instance.new("Frame")
-	Frame.Size = UDim2.new(0, 400, 0, 500)
-	Frame.Position = UDim2.new(0.5, -200, 0.5, -250)
+	Frame.Size = UDim2.new(0.4, 0, 0.7, 0)
+	Frame.Position = UDim2.new(0.3, 0, 0.15, 0)
 	Frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 	Frame.Parent = ShopUI
 
+	-- 获取适合的文本大小
+	local titleTextSize = getTextSize(30)
+	local buttonTextSize = getTextSize(20)
+
 	-- 标题
 	local Title = Instance.new("TextLabel")
-	Title.Text = "道具商店"
-	Title.Size = UDim2.new(1, 0, 0, 50)
+	Title.Text = "Tool Shop"
+	Title.Size = UDim2.new(1, 0, 0.1, 0)
 	Title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 	Title.TextColor3 = Color3.new(1,1,1)
 	Title.Font = Enum.Font.GothamBold
-	Title.TextSize = 30
+	Title.TextSize = titleTextSize
 	Title.Parent = Frame
 
 	-- 关闭按钮
 	local CloseButton = Instance.new("TextButton")
 	CloseButton.Text = "X"
-	CloseButton.Size = UDim2.new(0, 50, 0, 50)
-	CloseButton.Position = UDim2.new(1, -50, 0, 0)
+	CloseButton.Size = UDim2.new(0.1, 0, 0.1, 0)
+	CloseButton.Position = UDim2.new(1, 0, 0, 0)
 	CloseButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
 	CloseButton.TextColor3 = Color3.new(1,1,1)
 	CloseButton.Font = Enum.Font.GothamBold
-	CloseButton.TextSize = 30
+	CloseButton.TextSize = titleTextSize
 	CloseButton.Parent = Frame
 	CloseButton.MouseButton1Click:Connect(function()
 		ShopUI:Destroy()
 	end)
 
-	local yPos = 60
+	local yPos = 0.1
 	for toolType, config in pairs(ShopConfig) do
 		local tool = player.Backpack:FindFirstChild(toolType) or (player.Character and player.Character:FindFirstChild(toolType))
 
@@ -67,23 +86,25 @@ local function CreateShopUI()
 		end
 
 		local toolFrame = Instance.new("Frame")
-		toolFrame.Size = UDim2.new(1, -20, 0, 200)
-		toolFrame.Position = UDim2.new(0, 10, 0, yPos)
+		toolFrame.Size = UDim2.new(0.95, 0, 0.45, 0)
+		toolFrame.Position = UDim2.new(0.025, 0, yPos, 0)
 		toolFrame.BackgroundTransparency = 0.5
 		toolFrame.Parent = Frame
 
 		local nameLabel = Instance.new("TextLabel")
 		nameLabel.Text = toolType .. " Lv." .. currentLevel .. " x" .. currentCount
-		nameLabel.Size = UDim2.new(1, 0, 0, 40)
-		nameLabel.TextSize = 25
+		nameLabel.Size = UDim2.new(1, 0, 0.2, 0)
+		nameLabel.TextSize = buttonTextSize
 		nameLabel.Parent = toolFrame
 
 		if not tool then
+			local countPrice = config.BuyCountPrice
 			local buyBtn = Instance.new("TextButton")
-			buyBtn.Text = "购买道具 (Lv.1 x" .. config.BaseCount .. ")"
-			buyBtn.Size = UDim2.new(0.8, 0, 0, 50)
-			buyBtn.Position = UDim2.new(0.1, 0, 0.3, 0)
+			buyBtn.Text = "Purchase Tool (" .. countPrice .. " Money)"
+			buyBtn.Size = UDim2.new(0.85, 0, 0.2, 0)
+			buyBtn.Position = UDim2.new(0.08, 0, 0.3, 0)
 			buyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+			buyBtn.TextSize = buttonTextSize
 			buyBtn.Parent = toolFrame
 			buyBtn.MouseButton1Click:Connect(function()
 				BuyItemEvent:FireServer(toolType, "buyTool")
@@ -91,10 +112,11 @@ local function CreateShopUI()
 		else
 			local countPrice = config.BuyCountPrice
 			local countBtn = Instance.new("TextButton")
-			countBtn.Text = "购买次数 (+1, " .. countPrice .. " 金币)"
-			countBtn.Size = UDim2.new(0.8, 0, 0, 50)
-			countBtn.Position = UDim2.new(0.1, 0, 0.3, 0)
+			countBtn.Text = "Purchase Count (" .. countPrice .. " Money)"
+			countBtn.Size = UDim2.new(0.85, 0, 0.2, 0)
+			countBtn.Position = UDim2.new(0.08, 0, 0.3, 0)
 			countBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+			countBtn.TextSize = buttonTextSize
 			countBtn.Parent = toolFrame
 			countBtn.MouseButton1Click:Connect(function()
 				BuyItemEvent:FireServer(toolType, "buyCount")
@@ -104,24 +126,26 @@ local function CreateShopUI()
 				local nextLevel = currentLevel + 1
 				local upgradePrice = config.Levels[nextLevel].UpgradePrice
 				local upgradeBtn = Instance.new("TextButton")
-				upgradeBtn.Text = "升级等级 (Lv." .. nextLevel .. ", " .. upgradePrice .. " 金币)"
-				upgradeBtn.Size = UDim2.new(0.8, 0, 0, 50)
-				upgradeBtn.Position = UDim2.new(0.1, 0, 0.6, 0)
+				upgradeBtn.Text = "Level Up (" .. upgradePrice .. " Money)"
+				upgradeBtn.Size = UDim2.new(0.85, 0, 0.2, 0)
+				upgradeBtn.Position = UDim2.new(0.08, 0, 0.6, 0)
 				upgradeBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 0)
+				upgradeBtn.TextSize = buttonTextSize
 				upgradeBtn.Parent = toolFrame
 				upgradeBtn.MouseButton1Click:Connect(function()
 					BuyItemEvent:FireServer(toolType, "upgrade")
 				end)
 			else
 				local maxLabel = Instance.new("TextLabel")
-				maxLabel.Text = "等级已满！"
+				maxLabel.Text = "Level Cap！"
 				maxLabel.TextColor3 = Color3.new(0,1,0)
 				maxLabel.Position = UDim2.new(0.1, 0, 0.6, 0)
+				maxLabel.TextSize = buttonTextSize
 				maxLabel.Parent = toolFrame
 			end
 		end
-
-		yPos = yPos + 210
+		-- 两个图片栏之间的差距
+		yPos = yPos + 0.425
 	end
 end
 

@@ -66,6 +66,22 @@ local function getCharacterParts()
 	return humanoid, hrp
 end
 
+-- 禁用Humanoid的默认跳跃功能
+local function disableDefaultJump()
+	local humanoid, _ = getCharacterParts()
+	if humanoid then
+		-- 禁用Humanoid的默认跳跃行为
+		humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+		-- 设置JumpPower为0，确保默认跳跃不会生效
+		humanoid.JumpPower = 0
+		-- 设置JumpHeight为0，进一步确保默认跳跃不会生效
+		humanoid.JumpHeight = 0
+		-- 禁用自动跳跃
+		humanoid.AutoJumpEnabled = false
+		print("默认跳跃功能已禁用")
+	end
+end
+
 -- 判断角色是否在地面
 local function isOnGround()
 	local humanoid, _ = getCharacterParts()
@@ -126,7 +142,7 @@ local function onRenderStep()
 	end
 end
 
--- 空格键按下/松开处理
+-- 跳跃键按下/松开处理
 local function handleJumpAction(actionName, inputState, inputObj)
 	if inputState == Enum.UserInputState.Begin then
 		if not charging and isOnGround() then
@@ -143,7 +159,7 @@ local function handleJumpAction(actionName, inputState, inputObj)
 	elseif inputState == Enum.UserInputState.End then
 		if charging then
 			RunService:UnbindFromRenderStep("JumpCharge")
-			-- 只有松开空格且角色还在地面才能跳跃
+			-- 只有松开跳跃键且角色还在地面才能跳跃
 			if isOnGround() and chargeValue >= minCharge and chargeValue > 0 and not (chargeTimeout and chargeValue <= 0) then
 				-- 执行跳跃
 				doJump(math.clamp(chargeValue, minCharge, maxCharge) / maxCharge)
@@ -158,8 +174,12 @@ local function handleJumpAction(actionName, inputState, inputObj)
 	return Enum.ContextActionResult.Sink
 end
 
--- 绑定空格键
-ContextActionService:BindAction("CustomChargeJump", handleJumpAction, false, Enum.KeyCode.Space)
+-- 绑定跳跃键输入设备
+ContextActionService:BindAction("CustomChargeJump", handleJumpAction, true, Enum.PlayerActions.CharacterJump)
+
+-- 配置触摸按钮的大小和位置
+-- ContextActionService:SetPosition("CustomChargeJump", UDim2.new(0.2, 0, 0.2, 0))
+-- ContextActionService:SetSize("CustomChargeJump", UDim2.new(0.2, 0, 0.2, 0))
 
 -- 角色重生时重置
 local function onCharacterAdded(character)
@@ -167,6 +187,8 @@ local function onCharacterAdded(character)
 	chargeTimeout = false
 	chargeValue = 0
 	resetChargeBar()
+	-- 禁用默认跳跃功能
+	disableDefaultJump()
 end
 
 -- 初始化UI
@@ -180,6 +202,8 @@ local function initializeUI()
 		getJumpUI()
 		resetChargeBar()
 	end
+	-- 禁用默认跳跃功能
+	disableDefaultJump()
 end
 
 if localPlayer then
