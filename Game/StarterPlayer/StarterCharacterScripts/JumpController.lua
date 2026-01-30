@@ -12,6 +12,52 @@ local chargeDecaySpeed = 0.7 -- 达到最大后每秒减少的蓄力量
 local lastUpdate = 0
 local chargeTimeout = false
 
+-- 蓄力条UI变量
+local jumpUI
+local chargeBar
+local chargeBackground
+
+-- 获取蓄力条UI
+local function getJumpUI()
+	if not jumpUI then
+		jumpUI = localPlayer.PlayerGui:WaitForChild("JumpUI", 10)
+		if jumpUI then
+			local chargeBarFrame = jumpUI:FindFirstChild("ChargeBarFrame")
+			chargeBar = chargeBarFrame:FindFirstChild("ChargeBar")
+			chargeBackground = jumpUI:FindFirstChild("ChargeBackGroud")
+		end
+	end
+	return jumpUI, chargeBar, chargeBackground
+end
+
+-- 显示或隐藏蓄力条
+local function setChargeBarVisible(visible)
+	local ui, bar, bg = getJumpUI()
+	if ui then
+		ui.Enabled = visible
+	end
+end
+
+-- 更新蓄力条显示
+local function updateChargeBar(value)
+	local ui, bar, bg = getJumpUI()
+	if bar then
+		-- 计算蓄力比例 (0到1之间)
+		local chargeRatio = math.clamp(value / maxCharge, 0, 1)
+		-- 更新蓄力条的尺寸
+		bar.Size = UDim2.new(chargeRatio, 0, 1, 0)
+	end
+end
+
+-- 重置蓄力条
+local function resetChargeBar()
+	local ui, bar, bg = getJumpUI()
+	if bar then
+		bar.Size = UDim2.new(0, 0, 1, 0)
+		setChargeBarVisible(false)
+	end
+end
+
 -- 获取角色和 HumanoidRootPart
 local function getCharacterParts()
 	if not localPlayer.Character then return nil, nil end
@@ -51,7 +97,7 @@ local function doJump(power)
 	end
 end
 
--- 蓄力过程每帧更新（不再更新蓄力条UI）
+-- 蓄力过程每帧更新
 local function onRenderStep()
 	if charging then
 		local now = tick()
@@ -71,10 +117,12 @@ local function onRenderStep()
 				chargeValue = 0
 				charging = false
 				chargeTimeout = false
+				resetChargeBar()
 				return
 			end
 		end
-		-- 不再更新蓄力条UI
+		-- 更新蓄力条UI
+		updateChargeBar(chargeValue)
 	end
 end
 
@@ -87,6 +135,9 @@ local function handleJumpAction(actionName, inputState, inputObj)
 			chargeStartTime = tick()
 			lastUpdate = chargeStartTime
 			chargeValue = 0
+			-- 显示蓄力条
+			setChargeBarVisible(true)
+			updateChargeBar(0)
 			RunService:BindToRenderStep("JumpCharge", Enum.RenderPriority.Input.Value, onRenderStep)
 		end
 	elseif inputState == Enum.UserInputState.End then
@@ -100,6 +151,8 @@ local function handleJumpAction(actionName, inputState, inputObj)
 			charging = false
 			chargeTimeout = false
 			chargeValue = 0
+			-- 重置蓄力条
+			resetChargeBar()
 		end
 	end
 	return Enum.ContextActionResult.Sink
@@ -108,11 +161,25 @@ end
 -- 绑定空格键
 ContextActionService:BindAction("CustomChargeJump", handleJumpAction, false, Enum.KeyCode.Space)
 
--- 角色重生时重置（不再重置蓄力条UI）
+-- 角色重生时重置
 local function onCharacterAdded(character)
 	charging = false
 	chargeTimeout = false
 	chargeValue = 0
+	resetChargeBar()
+end
+
+-- 初始化UI
+local function initializeUI()
+	-- 等待PlayerGui加载
+	if localPlayer:FindFirstChild("PlayerGui") then
+		getJumpUI()
+		resetChargeBar()
+	else
+		localPlayer:WaitForChild("PlayerGui"):WaitForChild("JumpUI", 10)
+		getJumpUI()
+		resetChargeBar()
+	end
 end
 
 if localPlayer then
@@ -120,5 +187,7 @@ if localPlayer then
 	if localPlayer.Character then
 		onCharacterAdded(localPlayer.Character)
 	end
-end
 
+	-- 初始化UI
+	initializeUI()
+end
