@@ -12,19 +12,6 @@
 
 JumpController.lua 178-178 在屏幕上增加了一个新的按键，我要在代码中自定义他的大小及位置
 
-我是一个Roblox开发者，我有一个蓄力条分为框和条，路径如下:
-StarterGui
-└── JumpUI
-    └── ChargeBackGround（Frame）
-        └── ImageLabel
-    └── ChargeBarFrame
-        └── ChargeBar
-            └──ImageLabel
-当我将三个Frame中offset设置的值全调成Scale时，在蓄力的时候条开始从不应当出现的地方出现，然后整体向前移动而不是固定点向一个方向移动，我该怎么解决这个问题。
-
-
-
-
 作为一名Roblox开发者，我在开发蓄力条UI时遇到了位置异常问题。我的UI结构如下：
 StarterGui
 └── JumpUI
@@ -34,13 +21,8 @@ StarterGui
         └── ChargeBar
             └── ImageLabel
 
-当前问题：当我将上述三个Frame的Position属性从Offset模式全部调整为Scale模式后，蓄力条在蓄力过程中出现以下异常行为：
+当前问题：当我将ChargeBar下的ImageLabel中的Offset原本为1000的值设置为0，调整Scale为1后，蓄力条在蓄力过程中出现以下异常行为：
 1. 蓄力条初始位置异常，从非预期位置开始出现
 2. 蓄力过程中整个条整体向前移动，而非从固定起点向单一方向延伸
 
-请提供详细的解决方案，包括：
-1. 正确的UI层级结构设置建议
-2. 各Frame和ImageLabel的Position、Size属性的具体Scale值配置方案
-3. 蓄力条填充动画的实现逻辑修正方法
-4. 确保在不同屏幕分辨率下保持一致表现的适配方案
-5. 测试验证步骤，以确认蓄力条从正确位置开始并向单一方向平滑延伸
+请提供详细的解决方案
