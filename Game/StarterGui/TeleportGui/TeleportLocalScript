@@ -14,7 +14,6 @@ end
 local gui = script.Parent
 local toMainCityButton = gui:WaitForChild("ToMainCityButton")
 local toSavePointButton = gui:WaitForChild("ToSavePointButton")
-local tooltip = gui:WaitForChild("TooltipLabel")  -- 新增：Tooltip引用
 
 local COOLDOWN = 3
 local lastTeleportTime = 0
@@ -50,34 +49,13 @@ local function setupButtonVisual(button)
 	end)
 end
 
--- 新增：Tooltip显示函数
-local function showTooltip(text, button)
-	tooltip.Text = text
-	tooltip.Visible = true
 
-	-- 动态跟随鼠标（稍微偏移避免遮挡按钮）
-	local mousePos = UserInputService:GetMouseLocation()
-	tooltip.Position = UDim2.new(0, mousePos.X + 10, 0, mousePos.Y + 10)
-end
-
-local function hideTooltip()
-	tooltip.Visible = false
-	tooltip.Text = ""
-end
 
 -- 主城按钮设置
 toMainCityButton.Activated:Connect(function()
 	if not canTeleport() then return end
 	TeleportEvent:FireServer("MainCity")
 	startCooldown()
-end)
-
-toMainCityButton.MouseEnter:Connect(function()
-	showTooltip("Teleport To Maincity", toMainCityButton)
-end)
-
-toMainCityButton.MouseLeave:Connect(function()
-	hideTooltip()
 end)
 
 setupButtonVisual(toMainCityButton)
@@ -89,22 +67,5 @@ toSavePointButton.Activated:Connect(function()
 	startCooldown()
 end)
 
-toSavePointButton.MouseEnter:Connect(function()
-	showTooltip("Teleport To SavePoint", toSavePointButton)
-end)
-
-toSavePointButton.MouseLeave:Connect(function()
-	hideTooltip()
-end)
-
 setupButtonVisual(toSavePointButton)
 
--- 额外：鼠标移动时持续更新Tooltip位置（让它跟随鼠标更顺滑）
-UserInputService.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseMovement then
-		if tooltip.Visible then
-			local mousePos = UserInputService:GetMouseLocation()
-			tooltip.Position = UDim2.new(0, mousePos.X + 10, 0, mousePos.Y + 10)
-		end
-	end
-end)
