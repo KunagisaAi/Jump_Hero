@@ -31,8 +31,8 @@ for i = 1, POOL_SIZE do
 	-- 主文本
 	local textLabel = Instance.new("TextLabel")
 	textLabel.AnchorPoint = Vector2.new(0.5, 1)
-	textLabel.Position = UDim2.new(0.5, 0, 1, -200)
-	textLabel.Size = UDim2.new(0, 300, 0, 150)
+	textLabel.Position = UDim2.new(0.5, 0, 1.15, 0)
+	textLabel.Size = UDim2.new(0.9, 0, 0.9, 0)
 	textLabel.BackgroundTransparency = 1
 	textLabel.TextTransparency = 1  -- 初始透明
 	textLabel.Text = ""  -- 动态设
@@ -51,8 +51,8 @@ for i = 1, POOL_SIZE do
 	-- 辉光位置微调：上移10px，略大Size营造“上方光”
 	local glowLabel = Instance.new("TextLabel")  -- 叠加层做额外辉光
 	glowLabel.AnchorPoint = Vector2.new(0.5, 1)
-	glowLabel.Position = UDim2.new(0.5, 0, 1, -205)  -- 上移5px
-	glowLabel.Size = UDim2.new(0, 320, 0, 170)  -- 略大
+	glowLabel.Position = UDim2.new(0.5, 0, 1.075, 0)
+	glowLabel.Size = UDim2.new(0.8, 0, 0.8, 0)  -- 略大
 	glowLabel.BackgroundTransparency = 1
 	glowLabel.TextTransparency = 1
 	glowLabel.Text = ""  -- 同主文本
