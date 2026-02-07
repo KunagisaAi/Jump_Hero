@@ -16,6 +16,7 @@ local chargeTimeout = false
 local jumpUI
 local chargeBar
 local chargeBackground
+local chargeBarImage
 
 -- 获取蓄力条UI
 local function getJumpUI()
@@ -24,10 +25,11 @@ local function getJumpUI()
 		if jumpUI then
 			local chargeBarFrame = jumpUI:FindFirstChild("ChargeBarFrame")
 			chargeBar = chargeBarFrame:FindFirstChild("ChargeBar")
+			chargeBarImage = chargeBar:FindFirstChild("ImageLabel")
 			chargeBackground = jumpUI:FindFirstChild("ChargeBackGroud")
 		end
 	end
-	return jumpUI, chargeBar, chargeBackground
+	return jumpUI, chargeBarImage, chargeBackground
 end
 
 -- 显示或隐藏蓄力条
@@ -178,8 +180,8 @@ end
 ContextActionService:BindAction("CustomChargeJump", handleJumpAction, true, Enum.PlayerActions.CharacterJump)
 
 -- 配置触摸按钮的大小和位置
--- ContextActionService:SetPosition("CustomChargeJump", UDim2.new(0.2, 0, 0.2, 0))
--- ContextActionService:SetSize("CustomChargeJump", UDim2.new(0.2, 0, 0.2, 0))
+ --ContextActionService:SetPosition("CustomChargeJump", UDim2.new(0.2, 0, 0.2, 0))
+ --ContextActionService:SetSize("CustomChargeJump", UDim2.new(0.2, 0, 0.2, 0))
 
 -- 角色重生时重置
 local function onCharacterAdded(character)
