@@ -182,10 +182,10 @@ Tool.Equipped:Connect(function()
 	Tool.SlapLevel.Changed:Connect(UpdateSlapUI)
 
 	-- 绑定当前 Humanoid 的 Died 事件（死亡时清理）
-	local humanoid = Player.Character:FindFirstChild("Humanoid")
-	if humanoid then
-		humanoid.Died:Connect(CleanupTool)
-	end
+	--local humanoid = Player.Character:FindFirstChild("Humanoid")
+	--if humanoid then
+	--	humanoid.Died:Connect(CleanupTool)
+	--end
 end)
 
 -- 数量 <=0 时自动清理
@@ -211,8 +211,8 @@ end)
 -- **全局绑定 Died + 复活重建**
 Player.CharacterAdded:Connect(function(character)
 	task.wait(0.5)  -- 等待加载
-	local humanoid = character:WaitForChild("Humanoid")
-	humanoid.Died:Connect(CleanupTool)
+	--local humanoid = character:WaitForChild("Humanoid")
+	--humanoid.Died:Connect(CleanupTool)
 
 	-- 复活后如果已装备道具，重建 UI
 	if character:FindFirstChild(Tool.Name) then
