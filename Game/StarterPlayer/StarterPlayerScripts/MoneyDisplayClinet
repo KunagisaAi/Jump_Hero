@@ -50,6 +50,8 @@ moneyLabel.TextScaled = true
 moneyLabel.TextWrapped = false
 moneyLabel.TextSize = 32
 moneyLabel.TextXAlignment = Enum.TextXAlignment.Left -- 文本左对齐，向右扩展
+moneyLabel.TextStrokeColor3 = Color3.new(0, 0, 0) -- 黑色描边
+moneyLabel.TextStrokeTransparency = 0.5 -- 描边透明度，实现1-2像素的效果
 moneyLabel.Text = "Money: 0"
 moneyLabel.Parent = goldContainer
 
