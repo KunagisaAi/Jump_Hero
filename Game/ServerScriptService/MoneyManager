@@ -3,32 +3,50 @@ local DataStoreService = game:GetService("DataStoreService")
 
 local moneyDataStore = DataStoreService:GetDataStore("PlayerMoney")
 
+-- ==================== 加载（兼容旧数据 + 新表格） ====================
+local function loadPlayerMoney(player)
+	local userId = tostring(player.UserId)
+
+	local success, playerData = pcall(function()
+		return moneyDataStore:GetAsync(userId)
+	end)
+
+	if success then
+		-- 新格式：表格
+		if type(playerData) == "table" and playerData.Money ~= nil then
+			return playerData.Money
+			-- 旧格式：纯数字（自动兼容）
+		elseif type(playerData) == "number" then
+			return playerData
+		end
+	end
+
+	return 100 -- 默认初始金币
+end
+
+-- ==================== 保存（始终保存成表格） ====================
 local function savePlayerMoney(player)
 	local userId = tostring(player.UserId)
-	local moneyValue = player:FindFirstChild("leaderstats"):FindFirstChild("Money")
+	local leaderstats = player:FindFirstChild("leaderstats")
+	if not leaderstats then return end
+
+	local moneyValue = leaderstats:FindFirstChild("Money")
 	if moneyValue then
+		local playerData = {
+			Money = moneyValue.Value
+		}
+
 		local success, errorMessage = pcall(function()
-			moneyDataStore:SetAsync(userId, moneyValue.Value)
+			moneyDataStore:SetAsync(userId, playerData)
 		end)
+
 		if not success then
 			warn("保存金币失败:", errorMessage)
 		end
 	end
 end
 
-local function loadPlayerMoney(player)
-	local userId = tostring(player.UserId)
-	local success, moneyValue = pcall(function()
-		return moneyDataStore:GetAsync(userId)
-	end)
-
-	if success and moneyValue then
-		return moneyValue
-	else
-		return 1000 -- 默认初始值
-	end
-end
-
+-- ==================== 玩家加入 ====================
 Players.PlayerAdded:Connect(function(player)
 	local leaderstats = Instance.new("Folder")
 	leaderstats.Name = "leaderstats"
@@ -36,23 +54,30 @@ Players.PlayerAdded:Connect(function(player)
 
 	local money = Instance.new("IntValue")
 	money.Name = "Money"
-	money.Value = loadPlayerMoney(player) -- 加载保存的金币
+	money.Value = loadPlayerMoney(player)   -- 加载（兼容旧数据）
 	money.Parent = leaderstats
 
-	-- 监听金币数值变化，确保ShopServer等修改时能及时保存
+	-- 加载完立刻保存一次 → 自动把旧的纯数字迁移成新表格
+	savePlayerMoney(player)
+
+	-- 监听变化（推荐加防抖，防止刷钱时疯狂保存）
+	local lastSaveTime = 0
 	money.Changed:Connect(function()
+		if tick() - lastSaveTime < 1 then return end  -- 1秒内只保存一次
+		lastSaveTime = tick()
 		savePlayerMoney(player)
 	end)
 end)
 
+-- ==================== 玩家离开 ====================
 Players.PlayerRemoving:Connect(function(player)
 	savePlayerMoney(player)
 end)
 
--- 定期保存，防止意外崩溃导致数据丢失
+-- ==================== 每5分钟全服保存 ====================
 task.spawn(function()
 	while true do
-		task.wait(300) -- 每5分钟保存一次
+		task.wait(300)
 		for _, player in ipairs(Players:GetPlayers()) do
 			savePlayerMoney(player)
 		end
