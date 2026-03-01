@@ -1,45 +1,74 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local DataStoreService = game:GetService("DataStoreService")
 
--- 保存玩家的出生点（平台实例或默认出生点）
-local playerSpawnPoints = {}
+local savePointDataStore = DataStoreService:GetDataStore("PlayerSavePoints")
 
--- 默认出生点（Workspace下的SpawnLocation）
-local defaultSpawnLocation = Workspace:FindFirstChild("SpawnLocation")
+-- 每个玩家的最后存档点位置（Vector3）
+local playerLastSavePosition = {}
+
+-- 新增：记录玩家当前绑定的存档点 Part（防止同一平台重复保存）
+local playerCurrentSavePart = {}
+
+-- 默认出生点
+local defaultSpawnPosition = Workspace:FindFirstChild("SpawnLocation") 
+	and Workspace.SpawnLocation.Position 
+	or Vector3.new(0, 5, 0)
 
 -- 无敌冷却表
 local invinciblePlayers = {}
 
--- 获取平台上方的位置
-local function getAboveCFrame(part)
-	local cframe = part:GetPivot()
-	local offset = Vector3.new(0, 5, 0)
-	return cframe + offset
-end
+-- ==================== 数据加载/保存 ====================
+local function loadPlayerSavePoint(player)
+	local userId = tostring(player.UserId)
+	local success, data = pcall(function()
+		return savePointDataStore:GetAsync(userId)
+	end)
 
--- 获取玩家出生点（优先SavePoint，否则默认SpawnLocation）
-local function getPlayerSpawnPart(player)
-	local spawnPart = playerSpawnPoints[player]
-	if spawnPart and spawnPart:IsDescendantOf(Workspace) then
-		return spawnPart
+	if success and data and data.LastSavePointPosition then
+		local p = data.LastSavePointPosition
+		return Vector3.new(p.X, p.Y, p.Z)
 	end
-	return defaultSpawnLocation
+	return nil
 end
 
+local function savePlayerSavePoint(player)
+	local userId = tostring(player.UserId)
+	local pos = playerLastSavePosition[player]
+	if not pos then return end
+
+	local data = {
+		LastSavePointPosition = {X = pos.X, Y = pos.Y, Z = pos.Z}
+	}
+
+	local success, err = pcall(function()
+		savePointDataStore:SetAsync(userId, data)
+	end)
+
+	if not success then
+		warn("保存存档点失败:", err)
+	end
+end
+
+-- ==================== 获取存档点位置 ====================
+local function getPlayerSpawnPosition(player)
+	return playerLastSavePosition[player] or defaultSpawnPosition
+end
+
+-- ==================== 传送函数 ====================
 local function teleportToSpawn(player)
 	local character = player.Character
 	if not character then return end
-	local spawnPart = getPlayerSpawnPart(player)
-	if spawnPart then
-		local aboveCFrame = getAboveCFrame(spawnPart)
-		character:PivotTo(aboveCFrame)
-	end
+
+	local spawnPos = getPlayerSpawnPosition(player)
+	local aboveCFrame = CFrame.new(spawnPos + Vector3.new(0, 5, 0))
+	character:PivotTo(aboveCFrame)
 end
 
+-- ==================== 触碰处理（已优化！） ====================
 local function onTouched(player, hit)
-	if not hit or not hit:IsA("BasePart") then
-		return
-	end
+	if not hit or not hit:IsA("BasePart") then return end
 
 	local character = player.Character
 	if not character then return end
@@ -47,39 +76,43 @@ local function onTouched(player, hit)
 	local humanoid = character:FindFirstChild("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then return end
 
-	-- SavePoint逻辑
+	-- === SavePoint 逻辑（关键优化在这里） ===
 	if hit.Name == "SavePoint" then
-		playerSpawnPoints[player] = hit
+		-- 只有当存档点 Part 实例不同时才保存（站在同一个平台上不会重复！）
+		if playerCurrentSavePart[player] ~= hit then
+			playerCurrentSavePart[player] = hit
+			playerLastSavePosition[player] = hit.Position
+			savePlayerSavePoint(player)   -- 只保存一次
+
+			-- 可选调试（测试完可删掉或注释）
+			-- print(player.Name .. " 已更新存档点 → " .. hit:GetFullName())
+		end
 		return
 	end
 
-	-- Baseplate逻辑
+	-- === Baseplate 掉落伤害（保持不变） ===
 	if hit.Name == "Baseplate" then
-		-- 无敌冷却
 		if invinciblePlayers[player] then return end
 		invinciblePlayers[player] = true
 
-		-- 造成伤害
 		humanoid.Health = math.max(humanoid.Health - 40, 0)
 
-		-- 检查是否死亡
 		if humanoid.Health > 0 then
 			teleportToSpawn(player)
 		end
 
-		-- 1秒无敌
 		task.delay(1, function()
 			invinciblePlayers[player] = nil
 		end)
 	end
 end
 
+-- ==================== 角色设置（保持不变） ====================
 local function setupCharacter(player, character)
 	local humanoid = character:FindFirstChild("Humanoid")
 	if not humanoid then return end
 
-	-- 绑定触碰事件
-	for i, part in character:GetChildren() do
+	for _, part in ipairs(character:GetChildren()) do
 		if part:IsA("BasePart") then
 			part.Touched:Connect(function(hit)
 				onTouched(player, hit)
@@ -87,32 +120,46 @@ local function setupCharacter(player, character)
 		end
 	end
 
-	-- 绑定死亡事件，重生后传送到出生点
 	humanoid.Died:Connect(function()
-		-- 玩家死亡时不传送
-		-- 等待角色重生
 		player.CharacterAdded:Wait()
 		task.wait(0.1)
 		teleportToSpawn(player)
 	end)
 end
 
+-- ==================== 玩家加入 ====================
 Players.PlayerAdded:Connect(function(player)
+	-- 加载存档点位置
+	playerLastSavePosition[player] = loadPlayerSavePoint(player)
+	playerCurrentSavePart[player] = nil   -- 重置当前Part
+
 	player.CharacterAdded:Connect(function(character)
 		setupCharacter(player, character)
 	end)
-end)
 
-for i, player in Players:GetPlayers() do
 	if player.Character then
 		setupCharacter(player, player.Character)
 	end
-end
+end)
 
--- 在脚本最上面（GetService之后）添加
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- ==================== 玩家离开 ====================
+Players.PlayerRemoving:Connect(function(player)
+	savePlayerSavePoint(player)
+	playerLastSavePosition[player] = nil
+	playerCurrentSavePart[player] = nil
+end)
 
--- 创建RemoteEvent
+-- ==================== 每5分钟全服保存 ====================
+task.spawn(function()
+	while true do
+		task.wait(300)
+		for _, player in ipairs(Players:GetPlayers()) do
+			savePlayerSavePoint(player)
+		end
+	end
+end)
+
+-- ==================== RemoteEvent 处理（传送按钮） ====================
 local TeleportEvent = ReplicatedStorage:FindFirstChild("TeleportEvent")
 if not TeleportEvent then
 	TeleportEvent = Instance.new("RemoteEvent")
@@ -120,33 +167,19 @@ if not TeleportEvent then
 	TeleportEvent.Parent = ReplicatedStorage
 end
 
--- 主城固定坐标
 local MAIN_CITY_POS = Vector3.new(-2, 0.5, 116.5)
 
--- 传送函数（复用你已有的getAboveCFrame逻辑）
-local function teleportPlayer(player, targetCFrame)
+local function teleportPlayer(player, targetPos)
 	local character = player.Character
 	if not character then return end
-
-	local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-	if not humanoidRootPart then return end
-
-	-- 稍微抬高一点避免卡地
-	local aboveCFrame = CFrame.new(targetCFrame + Vector3.new(0, 5, 0))
+	local aboveCFrame = CFrame.new(targetPos + Vector3.new(0, 5, 0))
 	character:PivotTo(aboveCFrame)
 end
 
--- RemoteEvent 处理
 TeleportEvent.OnServerEvent:Connect(function(player, teleportType)
-	-- 可选：在这里加服务器端冷却验证（更防作弊），这里简单起见不加
 	if teleportType == "MainCity" then
 		teleportPlayer(player, MAIN_CITY_POS)
 	elseif teleportType == "SavePoint" then
-		-- 复用你已有的getPlayerSpawnPart和getAboveCFrame
-		local spawnPart = getPlayerSpawnPart(player)
-		if spawnPart then
-			local aboveCFrame = getAboveCFrame(spawnPart)
-			teleportPlayer(player, aboveCFrame.Position)  -- 用Position传
-		end
+		teleportPlayer(player, getPlayerSpawnPosition(player))
 	end
 end)

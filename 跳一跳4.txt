@@ -35,8 +35,13 @@ StarterGui
 
 我是一个Roblox开发者，现在我想用(DataStoreService)将金币进行数据存储，我该怎么做，像是MoneyManager每次好像都会重置，不知道会不会对数据存储有影响
 
+我会在例如ShopServer中购买或升级道具，到时候金币数值也会发生改动，我该怎么去同步他
+
+我的TeleportLocalScript文件有关于存档点的数据，其中PlatformSaveAndDamageHandler文件也有可能涉及到，我想将他的存档点数据保存到数据存储中。
+
 未解决：↓
+
+改完商店UI什么的再改这个吧↓
 
 你知道我有道具名字叫SlapTool，他有一些值，如SlapCount和SlapLevel，设计到这个道具的大概有SlapToolLocal和SlapToolServer，现在我想使用数据存储存储玩家持有道具的数量等级这些信息，当玩家复活后重新读取这些数据。
 
-我会在例如ShopServer中购买或升级道具，到时候金币数值也会发生改动，我该怎么去同步他
