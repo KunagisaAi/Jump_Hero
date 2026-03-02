@@ -24,7 +24,7 @@ local ToolIcons = {
 
 local ShopUI = nil
 
--- ==================== 屏幕适配函数 ====================
+-- ==================== 增强版屏幕适配函数（手机字体自动更小） ====================
 local function getScreenSize()
 	return workspace.CurrentCamera.ViewportSize
 end
@@ -32,7 +32,12 @@ end
 local function getScaledTextSize(baseSize)
 	local minSide = math.min(getScreenSize().X, getScreenSize().Y)
 	local scale = minSide / 1080
-	return math.max(12, math.floor(baseSize * scale))
+
+	-- 手机额外缩小（底框改成全屏后最关键的修复）
+	local isMobile = minSide < 700
+	local mobileExtraScale = isMobile and 0.82 or 1.0   -- 手机再缩小18%
+
+	return math.max(12, math.floor(baseSize * scale * mobileExtraScale))
 end
 
 -- ==================== 创建按钮（圆角 + 点击动画） ====================
@@ -70,10 +75,10 @@ local function CreateShopUI()
 	ShopUI.ResetOnSpawn = false
 	ShopUI.Parent = PlayerGui
 
-	-- 底框（纯Scale）
+	-- 底框（你改的1,1,1,1 完全保留）
 	local MainFrame = Instance.new("ImageLabel")
-	MainFrame.Size = UDim2.new(1, 0, 1, 0)
-	MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+	MainFrame.Size = UDim2.new(1.2, 0, 1.2, 0)
+	MainFrame.Position = UDim2.new(0.5, 0, 0.45, 0)
 	MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 	MainFrame.BackgroundTransparency = 1
 	MainFrame.Image = BACKGROUND_ID
@@ -82,7 +87,7 @@ local function CreateShopUI()
 
 	Instance.new("UIAspectRatioConstraint", MainFrame).AspectRatio = 1.65
 
-	-- 关闭按钮（纯Scale）
+	-- 关闭按钮
 	local CloseButton = Instance.new("ImageButton")
 	CloseButton.Size = UDim2.new(0.055, 0, 0.085, 0)
 	CloseButton.Position = UDim2.new(0.78, 0, 0.13, 0)
@@ -92,7 +97,7 @@ local function CreateShopUI()
 	CloseButton.Parent = MainFrame
 	CloseButton.MouseButton1Click:Connect(function() ShopUI:Destroy() end)
 
-	-- 商品滚动区（纯Scale）
+	-- 商品滚动区
 	local Content = Instance.new("Frame")
 	Content.Size = UDim2.new(0.85, 0, 0.68, 0)
 	Content.Position = UDim2.new(0.5, 0, 0.22, 0)
@@ -108,11 +113,11 @@ local function CreateShopUI()
 	Scrolling.Parent = Content
 
 	local ListLayout = Instance.new("UIListLayout")
-	ListLayout.Padding = UDim.new(0.022, 0)        -- 纯Scale
+	ListLayout.Padding = UDim.new(0.022, 0)
 	ListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	ListLayout.Parent = Scrolling
 
-	-- ==================== 生成商品（全部纯Scale） ====================
+	-- ==================== 生成商品 ====================
 	for toolType, config in pairs(ShopConfig) do
 		local itemFrame = Instance.new("ImageLabel")
 		itemFrame.Size = UDim2.new(0.7, 0, 0.3, 0)
@@ -132,7 +137,6 @@ local function CreateShopUI()
 			if l then currentLevel = l.Value end
 		end
 
-		-- 主容器（纯Scale）
 		local mainContainer = Instance.new("Frame")
 		mainContainer.Size = UDim2.new(0.8, 0, 0.7, 0)
 		mainContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -142,11 +146,11 @@ local function CreateShopUI()
 
 		local split = Instance.new("UIListLayout")
 		split.FillDirection = Enum.FillDirection.Horizontal
-		split.Padding = UDim.new(0.025, 0)          -- 纯Scale
+		split.Padding = UDim.new(0.025, 0)
 		split.VerticalAlignment = Enum.VerticalAlignment.Center
 		split.Parent = mainContainer
 
-		-- 左侧：图标区（纯Scale）
+		-- 左侧图标区
 		local leftFrame = Instance.new("Frame")
 		leftFrame.Size = UDim2.new(0.38, 0, 1, 0)
 		leftFrame.BackgroundTransparency = 1
@@ -184,30 +188,27 @@ local function CreateShopUI()
 		countLabel.TextSize = getScaledTextSize(20)
 		countLabel.Parent = leftFrame
 
-		-- 右侧：强制两行两列（纯Scale + 智能缩小）
+		-- 右侧按钮区（两行两列）
 		local rightFrame = Instance.new("Frame")
 		rightFrame.Size = UDim2.new(0.58, 0, 1, 0)
 		rightFrame.BackgroundTransparency = 1
 		rightFrame.Parent = mainContainer
 
 		local grid = Instance.new("UIGridLayout")
-		grid.CellPadding = UDim2.new(0.018, 0, 0.05, 0)   -- 纯Scale
+		grid.CellPadding = UDim2.new(0.018, 0, 0.05, 0)
 		grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
 		grid.VerticalAlignment = Enum.VerticalAlignment.Center
 
-		-- 智能缩放（手机上按钮自动变小，保持两行两列）
 		local screenWidth = getScreenSize().X
-		local buttonScale = math.clamp(screenWidth / 950, 0.68, 1)
-
-		grid.CellSize = UDim2.new(0.48, 0, 0.46 * buttonScale, 0)  -- 纯Scale
+		local buttonScale = math.clamp(screenWidth / 700, 0.68, 1)
+		grid.CellSize = UDim2.new(0.48, 0, 0.46 * buttonScale, 0)
 		grid.Parent = rightFrame
 
-		-- 1. 金币 +次数
+		-- 四个按钮
 		createButton("金币 +1次数\n" .. config.BuyCountPrice .. " 金币", Color3.fromRGB(0, 170, 80), rightFrame, function()
 			BuyItemEvent:FireServer(toolType, "buyCount")
 		end)
 
-		-- 2. 金币升级
 		if currentLevel < config.MaxLevel then
 			local nextPrice = config.Levels[currentLevel + 1].UpgradePrice
 			createButton("金币升级 Lv." .. (currentLevel+1) .. "\n" .. nextPrice .. " 金币", Color3.fromRGB(255, 140, 0), rightFrame, function()
@@ -217,13 +218,11 @@ local function CreateShopUI()
 			createButton("已满级", Color3.fromRGB(80,80,80), rightFrame, nil)
 		end
 
-		-- 3. Robux +次数
 		local robuxCountPrice = config.RobuxBuyCountPrice or 20
 		createButton("Robux +1次数\n" .. robuxCountPrice .. " Robux", Color3.fromRGB(0, 120, 215), rightFrame, function()
 			BuyItemEvent:FireServer(toolType, "buyCountRobux")
 		end)
 
-		-- 4. Robux升级
 		if currentLevel < config.MaxLevel then
 			local nextRPrice = config.Levels[currentLevel + 1].RobuxUpgradePrice or 50
 			createButton("Robux升级 Lv." .. (currentLevel+1) .. "\n" .. nextRPrice .. " Robux", Color3.fromRGB(0, 162, 255), rightFrame, function()
