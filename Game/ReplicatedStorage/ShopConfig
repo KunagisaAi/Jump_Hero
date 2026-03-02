@@ -1,29 +1,30 @@
--- ReplicatedStorage/ShopConfig
 return {
 	SlapTool = {
 		MaxLevel = 5,
-		BaseCount = 1,  -- 默认次数
-		BaseRange = 3,  -- 巴掌基础距离
-		BuyCountPrice = 50,  -- 每次购买次数的价格（+1 Count）
+		BaseCount = 1,
+		BaseRange = 3,
+		BuyCountPrice = 50,              -- 金币 +1次数
+		RobuxBuyCountPrice = 15,         -- ← 新增：Robux +1次数（改成你想要的价格）
 		Levels = {
-			[1] = {UpgradePrice = 0},     -- Lv.1 免费（初始）
-			[2] = {UpgradePrice = 100},
-			[3] = {UpgradePrice = 300},
-			[4] = {UpgradePrice = 600},
-			[5] = {UpgradePrice = 1000},
+			[1] = {UpgradePrice = 0, RobuxUpgradePrice = 0},
+			[2] = {UpgradePrice = 100, RobuxUpgradePrice = 35},
+			[3] = {UpgradePrice = 300, RobuxUpgradePrice = 65},
+			[4] = {UpgradePrice = 600, RobuxUpgradePrice = 95},
+			[5] = {UpgradePrice = 1000, RobuxUpgradePrice = 130},
 		}
 	},
 	ShieldTool = {
 		MaxLevel = 5,
 		BaseCount = 1,
 		BaseDuration = 3,
-		BuyCountPrice = 60,  -- 护盾购买次数价格
+		BuyCountPrice = 60,
+		RobuxBuyCountPrice = 18,         -- ← 新增
 		Levels = {
-			[1] = {UpgradePrice = 0},
-			[2] = {UpgradePrice = 150},
-			[3] = {UpgradePrice = 400},
-			[4] = {UpgradePrice = 800},
-			[5] = {UpgradePrice = 1300},
+			[1] = {UpgradePrice = 0, RobuxUpgradePrice = 0},
+			[2] = {UpgradePrice = 150, RobuxUpgradePrice = 45},
+			[3] = {UpgradePrice = 400, RobuxUpgradePrice = 80},
+			[4] = {UpgradePrice = 800, RobuxUpgradePrice = 115},
+			[5] = {UpgradePrice = 1300, RobuxUpgradePrice = 155},
 		}
 	}
 }

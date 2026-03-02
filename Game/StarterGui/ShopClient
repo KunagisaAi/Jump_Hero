@@ -1,153 +1,239 @@
--- StarterPlayerScripts/ShopClient（UI动态显示 + 按钮文本更新 + 关闭按钮）
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
 local ShopConfig = require(ReplicatedStorage:WaitForChild("ShopConfig"))
 
 local player = Players.LocalPlayer
 local PlayerGui = player:WaitForChild("PlayerGui")
 
--- 获取屏幕尺寸，用于适配不同设备
-local function getScreenSize()
-	return workspace.CurrentCamera.ViewportSize
-end
-
--- 根据屏幕尺寸计算适合的文本大小
-local function getTextSize(baseSize)
-	local screenSize = getScreenSize()
-	-- 以屏幕较短边为基准计算文本大小
-	local minSize = math.min(screenSize.X, screenSize.Y)
-	-- 调整文本大小，确保在小屏幕上也能正常显示
-	local scaleFactor = minSize / 1080 -- 以1080p为基准
-	return math.max(12, math.floor(baseSize * scaleFactor))
-end
-
 local OpenShopEvent = ReplicatedStorage:WaitForChild("OpenShopEvent")
 local BuyItemEvent = ReplicatedStorage:WaitForChild("BuyItemEvent")
 local RefreshShopEvent = ReplicatedStorage:WaitForChild("RefreshShopEvent")
 
+-- ====================== 图片ID ======================
+local BACKGROUND_ID   = "rbxassetid://94888497864695"
+local ITEM_BG_ID      = "rbxassetid://127777237746687"
+local CLOSE_NORMAL_ID = "rbxassetid://128604353538348"
+local CLOSE_HOVER_ID  = "rbxassetid://135507042277073"
+
+local ToolIcons = {
+	["SlapTool"]   = "rbxassetid://94497172509286",
+	["ShieldTool"] = "rbxassetid://105403420633099",
+}
+
 local ShopUI = nil
+
+-- ==================== 屏幕适配函数 ====================
+local function getScreenSize()
+	return workspace.CurrentCamera.ViewportSize
+end
+
+local function getScaledTextSize(baseSize)
+	local minSide = math.min(getScreenSize().X, getScreenSize().Y)
+	local scale = minSide / 1080
+	return math.max(12, math.floor(baseSize * scale))
+end
+
+-- ==================== 创建按钮（圆角 + 点击动画） ====================
+local function createButton(text, color, parent, callback)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, 0, 1, 0)
+	btn.BackgroundColor3 = color
+	btn.Text = text
+	btn.TextColor3 = Color3.new(1,1,1)
+	btn.Font = Enum.Font.GothamBold
+	btn.TextSize = getScaledTextSize(17)
+	btn.AutoButtonColor = false
+	btn.Parent = parent
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 12)
+	corner.Parent = btn
+
+	local scale = Instance.new("UIScale")
+	scale.Parent = btn
+
+	local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad)
+	btn.MouseButton1Down:Connect(function() TweenService:Create(scale, tweenInfo, {Scale = 0.93}):Play() end)
+	btn.MouseButton1Up:Connect(function() 
+		TweenService:Create(scale, tweenInfo, {Scale = 1}):Play()
+		if callback then callback() end
+	end)
+	btn.MouseLeave:Connect(function() TweenService:Create(scale, tweenInfo, {Scale = 1}):Play() end)
+	return btn
+end
 
 local function CreateShopUI()
 	if ShopUI then ShopUI:Destroy() end
-
 	ShopUI = Instance.new("ScreenGui")
-	ShopUI.Name = "ShopUI"
+	ShopUI.ResetOnSpawn = false
 	ShopUI.Parent = PlayerGui
 
-	local Frame = Instance.new("Frame")
-	Frame.Size = UDim2.new(0.4, 0, 0.7, 0)
-	Frame.Position = UDim2.new(0.3, 0, 0.15, 0)
-	Frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-	Frame.Parent = ShopUI
+	-- 底框（纯Scale）
+	local MainFrame = Instance.new("ImageLabel")
+	MainFrame.Size = UDim2.new(1.3, 0, 1.4, 0)
+	MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+	MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+	MainFrame.BackgroundTransparency = 1
+	MainFrame.Image = BACKGROUND_ID
+	MainFrame.ScaleType = Enum.ScaleType.Fit
+	MainFrame.Parent = ShopUI
 
-	-- 获取适合的文本大小
-	local titleTextSize = getTextSize(30)
-	local buttonTextSize = getTextSize(20)
+	Instance.new("UIAspectRatioConstraint", MainFrame).AspectRatio = 1.65
 
-	-- 标题
-	local Title = Instance.new("TextLabel")
-	Title.Text = "Tool Shop"
-	Title.Size = UDim2.new(1, 0, 0.1, 0)
-	Title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-	Title.TextColor3 = Color3.new(1,1,1)
-	Title.Font = Enum.Font.GothamBold
-	Title.TextSize = titleTextSize
-	Title.Parent = Frame
+	-- 关闭按钮（纯Scale）
+	local CloseButton = Instance.new("ImageButton")
+	CloseButton.Size = UDim2.new(0.055, 0, 0.085, 0)
+	CloseButton.Position = UDim2.new(0.78, 0, 0.13, 0)
+	CloseButton.BackgroundTransparency = 1
+	CloseButton.Image = CLOSE_NORMAL_ID
+	CloseButton.HoverImage = CLOSE_HOVER_ID
+	CloseButton.Parent = MainFrame
+	CloseButton.MouseButton1Click:Connect(function() ShopUI:Destroy() end)
 
-	-- 关闭按钮
-	local CloseButton = Instance.new("TextButton")
-	CloseButton.Text = "X"
-	CloseButton.Size = UDim2.new(0.1, 0, 0.1, 0)
-	CloseButton.Position = UDim2.new(1, 0, 0, 0)
-	CloseButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-	CloseButton.TextColor3 = Color3.new(1,1,1)
-	CloseButton.Font = Enum.Font.GothamBold
-	CloseButton.TextSize = titleTextSize
-	CloseButton.Parent = Frame
-	CloseButton.MouseButton1Click:Connect(function()
-		ShopUI:Destroy()
-	end)
+	-- 商品滚动区（纯Scale）
+	local Content = Instance.new("Frame")
+	Content.Size = UDim2.new(0.85, 0, 0.68, 0)
+	Content.Position = UDim2.new(0.5, 0, 0.22, 0)
+	Content.AnchorPoint = Vector2.new(0.5, 0)
+	Content.BackgroundTransparency = 1
+	Content.Parent = MainFrame
 
-	local yPos = 0.1
+	local Scrolling = Instance.new("ScrollingFrame")
+	Scrolling.Size = UDim2.new(1, 0, 1, 0)
+	Scrolling.BackgroundTransparency = 1
+	Scrolling.ScrollBarThickness = 8
+	Scrolling.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	Scrolling.Parent = Content
+
+	local ListLayout = Instance.new("UIListLayout")
+	ListLayout.Padding = UDim.new(0.022, 0)        -- 纯Scale
+	ListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	ListLayout.Parent = Scrolling
+
+	-- ==================== 生成商品（全部纯Scale） ====================
 	for toolType, config in pairs(ShopConfig) do
+		local itemFrame = Instance.new("ImageLabel")
+		itemFrame.Size = UDim2.new(0.7, 0, 0.3, 0)
+		itemFrame.BackgroundTransparency = 1
+		itemFrame.Image = ITEM_BG_ID
+		itemFrame.ScaleType = Enum.ScaleType.Stretch
+		itemFrame.Parent = Scrolling
+
 		local tool = player.Backpack:FindFirstChild(toolType) or (player.Character and player.Character:FindFirstChild(toolType))
-
-		-- 智能 baseName
-		local baseName = string.gsub(toolType, "Tool$", "")
-
 		local currentCount = config.BaseCount
 		local currentLevel = 1
 		if tool then
-			local countValue = tool:FindFirstChild(baseName .. "Count")
-			if countValue then currentCount = countValue.Value end
-
-			local levelValue = tool:FindFirstChild(baseName .. "Level")
-			if levelValue then currentLevel = levelValue.Value end
+			local baseName = string.gsub(toolType, "Tool$", "")
+			local c = tool:FindFirstChild(baseName .. "Count") or tool:FindFirstChild("Count")
+			local l = tool:FindFirstChild(baseName .. "Level") or tool:FindFirstChild("Level")
+			if c then currentCount = c.Value end
+			if l then currentLevel = l.Value end
 		end
 
-		local toolFrame = Instance.new("Frame")
-		toolFrame.Size = UDim2.new(0.95, 0, 0.45, 0)
-		toolFrame.Position = UDim2.new(0.025, 0, yPos, 0)
-		toolFrame.BackgroundTransparency = 0.5
-		toolFrame.Parent = Frame
+		-- 主容器（纯Scale）
+		local mainContainer = Instance.new("Frame")
+		mainContainer.Size = UDim2.new(0.8, 0, 0.7, 0)
+		mainContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
+		mainContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+		mainContainer.BackgroundTransparency = 1
+		mainContainer.Parent = itemFrame
+
+		local split = Instance.new("UIListLayout")
+		split.FillDirection = Enum.FillDirection.Horizontal
+		split.Padding = UDim.new(0.025, 0)          -- 纯Scale
+		split.VerticalAlignment = Enum.VerticalAlignment.Center
+		split.Parent = mainContainer
+
+		-- 左侧：图标区（纯Scale）
+		local leftFrame = Instance.new("Frame")
+		leftFrame.Size = UDim2.new(0.38, 0, 1, 0)
+		leftFrame.BackgroundTransparency = 1
+		leftFrame.Parent = mainContainer
+
+		local iconId = ToolIcons[toolType]
+		if iconId then
+			local icon = Instance.new("ImageLabel")
+			icon.Size = UDim2.new(0.85, 0, 0.65, 0)
+			icon.Position = UDim2.new(0.5, 0, 0.38, 0)
+			icon.AnchorPoint = Vector2.new(0.5, 0.5)
+			icon.BackgroundTransparency = 1
+			icon.Image = iconId
+			icon.ScaleType = Enum.ScaleType.Fit
+			icon.Parent = leftFrame
+		end
 
 		local nameLabel = Instance.new("TextLabel")
-		nameLabel.Text = toolType .. " Lv." .. currentLevel .. " x" .. currentCount
 		nameLabel.Size = UDim2.new(1, 0, 0.2, 0)
-		nameLabel.TextSize = buttonTextSize
-		nameLabel.Parent = toolFrame
+		nameLabel.Position = UDim2.new(0, 0, 0.72, 0)
+		nameLabel.BackgroundTransparency = 1
+		nameLabel.Text = toolType .. "  Lv." .. currentLevel
+		nameLabel.TextColor3 = Color3.new(1,1,1)
+		nameLabel.Font = Enum.Font.GothamBold
+		nameLabel.TextSize = getScaledTextSize(25)
+		nameLabel.Parent = leftFrame
 
-		if not tool then
-			local countPrice = config.BuyCountPrice
-			local buyBtn = Instance.new("TextButton")
-			buyBtn.Text = "Purchase Tool (" .. countPrice .. " Money)"
-			buyBtn.Size = UDim2.new(0.85, 0, 0.2, 0)
-			buyBtn.Position = UDim2.new(0.08, 0, 0.3, 0)
-			buyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-			buyBtn.TextSize = buttonTextSize
-			buyBtn.Parent = toolFrame
-			buyBtn.MouseButton1Click:Connect(function()
-				BuyItemEvent:FireServer(toolType, "buyTool")
+		local countLabel = Instance.new("TextLabel")
+		countLabel.Size = UDim2.new(1, 0, 0.15, 0)
+		countLabel.Position = UDim2.new(0, 0, 0.88, 0)
+		countLabel.BackgroundTransparency = 1
+		countLabel.Text = "次数: " .. currentCount
+		countLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+		countLabel.Font = Enum.Font.Gotham
+		countLabel.TextSize = getScaledTextSize(20)
+		countLabel.Parent = leftFrame
+
+		-- 右侧：强制两行两列（纯Scale + 智能缩小）
+		local rightFrame = Instance.new("Frame")
+		rightFrame.Size = UDim2.new(0.58, 0, 1, 0)
+		rightFrame.BackgroundTransparency = 1
+		rightFrame.Parent = mainContainer
+
+		local grid = Instance.new("UIGridLayout")
+		grid.CellPadding = UDim2.new(0.018, 0, 0.05, 0)   -- 纯Scale
+		grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		grid.VerticalAlignment = Enum.VerticalAlignment.Center
+
+		-- 智能缩放（手机上按钮自动变小，保持两行两列）
+		local screenWidth = getScreenSize().X
+		local buttonScale = math.clamp(screenWidth / 950, 0.68, 1)
+
+		grid.CellSize = UDim2.new(0.48, 0, 0.46 * buttonScale, 0)  -- 纯Scale
+		grid.Parent = rightFrame
+
+		-- 1. 金币 +次数
+		createButton("金币 +1次数\n" .. config.BuyCountPrice .. " 金币", Color3.fromRGB(0, 170, 80), rightFrame, function()
+			BuyItemEvent:FireServer(toolType, "buyCount")
+		end)
+
+		-- 2. 金币升级
+		if currentLevel < config.MaxLevel then
+			local nextPrice = config.Levels[currentLevel + 1].UpgradePrice
+			createButton("金币升级 Lv." .. (currentLevel+1) .. "\n" .. nextPrice .. " 金币", Color3.fromRGB(255, 140, 0), rightFrame, function()
+				BuyItemEvent:FireServer(toolType, "upgrade")
 			end)
 		else
-			local countPrice = config.BuyCountPrice
-			local countBtn = Instance.new("TextButton")
-			countBtn.Text = "Purchase Count (" .. countPrice .. " Money)"
-			countBtn.Size = UDim2.new(0.85, 0, 0.2, 0)
-			countBtn.Position = UDim2.new(0.08, 0, 0.3, 0)
-			countBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
-			countBtn.TextSize = buttonTextSize
-			countBtn.Parent = toolFrame
-			countBtn.MouseButton1Click:Connect(function()
-				BuyItemEvent:FireServer(toolType, "buyCount")
-			end)
-
-			if currentLevel < config.MaxLevel then
-				local nextLevel = currentLevel + 1
-				local upgradePrice = config.Levels[nextLevel].UpgradePrice
-				local upgradeBtn = Instance.new("TextButton")
-				upgradeBtn.Text = "Level Up (" .. upgradePrice .. " Money)"
-				upgradeBtn.Size = UDim2.new(0.85, 0, 0.2, 0)
-				upgradeBtn.Position = UDim2.new(0.08, 0, 0.6, 0)
-				upgradeBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 0)
-				upgradeBtn.TextSize = buttonTextSize
-				upgradeBtn.Parent = toolFrame
-				upgradeBtn.MouseButton1Click:Connect(function()
-					BuyItemEvent:FireServer(toolType, "upgrade")
-				end)
-			else
-				local maxLabel = Instance.new("TextLabel")
-				maxLabel.Text = "Level Cap！"
-				maxLabel.TextColor3 = Color3.new(0,1,0)
-				maxLabel.Position = UDim2.new(0.1, 0, 0.6, 0)
-				maxLabel.TextSize = buttonTextSize
-				maxLabel.Parent = toolFrame
-			end
+			createButton("已满级", Color3.fromRGB(80,80,80), rightFrame, nil)
 		end
-		-- 两个图片栏之间的差距
-		yPos = yPos + 0.425
+
+		-- 3. Robux +次数
+		local robuxCountPrice = config.RobuxBuyCountPrice or 20
+		createButton("Robux +1次数\n" .. robuxCountPrice .. " Robux", Color3.fromRGB(0, 120, 215), rightFrame, function()
+			BuyItemEvent:FireServer(toolType, "buyCountRobux")
+		end)
+
+		-- 4. Robux升级
+		if currentLevel < config.MaxLevel then
+			local nextRPrice = config.Levels[currentLevel + 1].RobuxUpgradePrice or 50
+			createButton("Robux升级 Lv." .. (currentLevel+1) .. "\n" .. nextRPrice .. " Robux", Color3.fromRGB(0, 162, 255), rightFrame, function()
+				BuyItemEvent:FireServer(toolType, "upgradeRobux")
+			end)
+		else
+			createButton("已满级", Color3.fromRGB(80,80,80), rightFrame, nil)
+		end
 	end
 end
 
 OpenShopEvent.OnClientEvent:Connect(CreateShopUI)
-RefreshShopEvent.OnClientEvent:Connect(CreateShopUI)  -- 购买/升级后重建UI，文本自动更新下一级
+RefreshShopEvent.OnClientEvent:Connect(CreateShopUI)
