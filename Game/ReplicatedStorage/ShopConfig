@@ -2,9 +2,9 @@ return {
 	SlapTool = {
 		MaxLevel = 5,
 		BaseCount = 1,
-		BaseRange = 3,
-		BuyCountPrice = 50,              -- 金币 +1次数
-		RobuxBuyCountPrice = 15,         -- ← 新增：Robux +1次数（改成你想要的价格）
+		BuyCountPrice = 50,
+		RobuxBuyCountProductId = 3549181546,      -- ← 改成 Slap Buy Count 的 Product ID
+		RobuxUpgradeProductId = 3549184144,       -- ← 改成 Slap Upgrade 的 Product ID
 		Levels = {
 			[1] = {UpgradePrice = 0, RobuxUpgradePrice = 0},
 			[2] = {UpgradePrice = 100, RobuxUpgradePrice = 35},
@@ -16,9 +16,9 @@ return {
 	ShieldTool = {
 		MaxLevel = 5,
 		BaseCount = 1,
-		BaseDuration = 3,
 		BuyCountPrice = 60,
-		RobuxBuyCountPrice = 18,         -- ← 新增
+		RobuxBuyCountProductId = 3549181938,      -- ← 改成 Shield Buy Count 的 Product ID
+		RobuxUpgradeProductId = 3549184358,       -- ← 改成 Shield Upgrade 的 Product ID
 		Levels = {
 			[1] = {UpgradePrice = 0, RobuxUpgradePrice = 0},
 			[2] = {UpgradePrice = 150, RobuxUpgradePrice = 45},

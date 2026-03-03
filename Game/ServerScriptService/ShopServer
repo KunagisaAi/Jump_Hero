@@ -1,3 +1,5 @@
+local Players = game:GetService("Players")
+local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
@@ -48,52 +50,92 @@ local function CreatePlayerToolIfNotExist(player, toolType)
 	return tool
 end
 
+-- ==================== Robux 支付处理（核心） ====================
 BuyItemEvent.OnServerEvent:Connect(function(player, toolType, action)
 	local config = ShopConfig[toolType]
 	if not config then return end
 
-	local moneyValue = player.leaderstats:FindFirstChild("Money")
-	if not moneyValue then return end
-
-	local tool = FindPlayerTool(player, toolType)
-	local baseName = string.gsub(toolType, "Tool$", "")
-
 	if action == "buyCount" then
-		-- 金币买数量（首次没有道具也会自动创建）
-		tool = CreatePlayerToolIfNotExist(player, toolType)
+		-- 金币买次数（原逻辑）
+		local tool = CreatePlayerToolIfNotExist(player, toolType)
 		if not tool then return end
+		local moneyValue = player.leaderstats:FindFirstChild("Money")
+		if not moneyValue or moneyValue.Value < config.BuyCountPrice then return end
 
-		local price = config.BuyCountPrice
-		if moneyValue.Value < price then 
-			print(player.Name .. " 金币不足")
-			return 
-		end
-
-		moneyValue.Value -= price
+		moneyValue.Value -= config.BuyCountPrice
+		local baseName = string.gsub(toolType, "Tool$", "")
 		local countValue = tool:FindFirstChild(baseName .. "Count") or tool:FindFirstChild("Count")
 		if countValue then countValue.Value += 1 end
 
 		RefreshShopEvent:FireClient(player)
 
 	elseif action == "upgrade" then
-		-- 金币升级
+		-- 金币升级（原逻辑）
+		local tool = FindPlayerTool(player, toolType)
 		if not tool then return end
+		local baseName = string.gsub(toolType, "Tool$", "")
 		local levelValue = tool:FindFirstChild(baseName .. "Level") or tool:FindFirstChild("Level")
 		if not levelValue or levelValue.Value >= config.MaxLevel then return end
 
 		local nextLevel = levelValue.Value + 1
 		local price = config.Levels[nextLevel].UpgradePrice
-
-		if moneyValue.Value < price then return end
+		local moneyValue = player.leaderstats:FindFirstChild("Money")
+		if not moneyValue or moneyValue.Value < price then return end
 
 		moneyValue.Value -= price
 		levelValue.Value = nextLevel
 		RefreshShopEvent:FireClient(player)
 
-	elseif action == "buyCountRobux" or action == "upgradeRobux" then
-		-- Robux购买（占位，后续接真实支付）
-		print(player.Name .. " 请求Robux操作: " .. action .. " - " .. toolType)
-		-- TODO: 这里以后改成 MarketplaceService:PromptProductPurchase
-		-- RefreshShopEvent:FireClient(player)  -- 支付成功后再刷新
+	elseif action == "buyCountRobux" then
+		-- Robux 买次数
+		local productId = config.RobuxBuyCountProductId
+		if productId and productId > 0 then
+			MarketplaceService:PromptProductPurchase(player, productId)
+		end
+
+	elseif action == "upgradeRobux" then
+		-- Robux 升级
+		local productId = config.RobuxUpgradeProductId
+		if productId and productId > 0 then
+			MarketplaceService:PromptProductPurchase(player, productId)
+		end
 	end
 end)
+
+-- ==================== 支付成功处理（最重要！） ====================
+MarketplaceService.ProcessReceipt = function(receiptInfo)
+	local player = Players:GetPlayerByUserId(receiptInfo.PlayerId)
+	if not player then return Enum.ProductPurchaseDecision.NotProcessedYet end
+
+	local productId = receiptInfo.ProductId
+
+	for toolType, config in pairs(ShopConfig) do
+		local baseName = string.gsub(toolType, "Tool$", "")
+
+		-- Robux 买次数
+		if config.RobuxBuyCountProductId == productId then
+			local tool = CreatePlayerToolIfNotExist(player, toolType)
+			if tool then
+				local countValue = tool:FindFirstChild(baseName .. "Count") or tool:FindFirstChild("Count")
+				if countValue then countValue.Value += 1 end
+				RefreshShopEvent:FireClient(player)
+			end
+			return Enum.ProductPurchaseDecision.PurchaseGranted
+		end
+
+		-- Robux 升级
+		if config.RobuxUpgradeProductId == productId then
+			local tool = FindPlayerTool(player, toolType)
+			if tool then
+				local levelValue = tool:FindFirstChild(baseName .. "Level") or tool:FindFirstChild("Level")
+				if levelValue and levelValue.Value < config.MaxLevel then
+					levelValue.Value += 1
+					RefreshShopEvent:FireClient(player)
+				end
+			end
+			return Enum.ProductPurchaseDecision.PurchaseGranted
+		end
+	end
+
+	return Enum.ProductPurchaseDecision.NotProcessedYet
+end
