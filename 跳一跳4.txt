@@ -46,6 +46,8 @@ StarterGui
 
 请继续修改这里的内容，在位置及大小等数据上尽量全部使用Scale而不是Offset
 
+我的商店现在想实现用Roblox购买的功能，怕你忘了我再发一遍ShopServer给你：
+[代码]
 
 
 未解决：↓
