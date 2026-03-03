@@ -49,11 +49,12 @@ StarterGui
 我的商店现在想实现用Roblox购买的功能，怕你忘了我再发一遍ShopServer给你：
 [代码]
 
+这是我的两个道具代码，他目前只能通过鼠标左键触发道具，为了适配更多设备我想当轻击屏幕时也能触发
+[代码]
+[代码]
+↑他给了我Tool.Activated，但不好用，我手动换成了Tool.Deactivated
 
 未解决：↓
-
-
-改完商店UI什么的再改这个吧↓
 
 
 你知道我有道具名字叫SlapTool，他有一些值，如SlapCount和SlapLevel，设计到这个道具的大概有SlapToolLocal和SlapToolServer，现在我想使用数据存储存储玩家持有道具的数量等级这些信息，当玩家复活后重新读取这些数据。

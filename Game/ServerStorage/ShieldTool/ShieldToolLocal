@@ -127,18 +127,17 @@ end
 
 -- 鼠标左键触发
 local canShield = true
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton1 and canShield then
-		if Tool.Parent == Player.Character then
-			local ShieldCount = Tool:FindFirstChild("ShieldCount")
-			if ShieldCount and ShieldCount.Value > 0 then
-				canShield = false
-				ShieldEvent:FireServer()
-				PlayFeedback()
-				task.wait(2)
-				canShield = true
-			end
-		end
+Tool.Deactivated:Connect(function()
+	if not canShield then return end
+	if Tool.Parent ~= Player.Character then return end
+
+	local ShieldCount = Tool:FindFirstChild("ShieldCount")
+	if ShieldCount and ShieldCount.Value > 0 then
+		canShield = false
+		ShieldEvent:FireServer()
+		PlayFeedback()
+		task.wait(2)
+		canShield = true
 	end
 end)
 
