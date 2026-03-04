@@ -130,7 +130,7 @@ local function PlayFeedback()
 	end
 end
 
--- 鼠标左键触发
+-- 点击松开后触发
 local canSlap = true  -- 新增冷却变量
 
 Tool.Deactivated:Connect(function()
@@ -154,7 +154,7 @@ local function CleanupTool()
 		SlapUI = nil
 	end
 	if animationTrack then
-		animationTrack:Stop()
+		animationTrack:Stop() 
 		animationTrack = nil
 	end
 

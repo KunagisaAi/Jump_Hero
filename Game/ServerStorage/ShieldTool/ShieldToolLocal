@@ -125,7 +125,7 @@ local function PlayFeedback()
 	end
 end
 
--- 鼠标左键触发
+-- 点击松开后触发
 local canShield = true
 Tool.Deactivated:Connect(function()
 	if not canShield then return end

@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
 local ShopConfig = require(ReplicatedStorage:WaitForChild("ShopConfig"))
+local DataManager = game.ServerScriptService:WaitForChild("ToolManager")
 
 local BuyItemEvent = ReplicatedStorage:FindFirstChild("BuyItemEvent") or Instance.new("RemoteEvent")
 BuyItemEvent.Name = "BuyItemEvent"
@@ -14,8 +15,8 @@ RefreshShopEvent.Name = "RefreshShopEvent"
 RefreshShopEvent.Parent = ReplicatedStorage
 
 local function FindPlayerTool(player, toolType)
-	local backpack = player.Backpack
 	local character = player.Character
+	local backpack = player.Backpack
 	if character then
 		local found = character:FindFirstChild(toolType)
 		if found then return found end
@@ -39,7 +40,7 @@ local function CreatePlayerToolIfNotExist(player, toolType)
 	local baseName = string.gsub(toolType, "Tool$", "")
 	local countValue = tool:FindFirstChild(baseName .. "Count") or Instance.new("IntValue")
 	countValue.Name = baseName .. "Count"
-	countValue.Value = ShopConfig[toolType].BaseCount
+	countValue.Value = ShopConfig[toolType].BaseCount   -- 首次购买正确为1
 	countValue.Parent = tool
 
 	local levelValue = tool:FindFirstChild(baseName .. "Level") or Instance.new("IntValue")
@@ -50,27 +51,27 @@ local function CreatePlayerToolIfNotExist(player, toolType)
 	return tool
 end
 
--- ==================== Robux 支付处理（核心） ====================
 BuyItemEvent.OnServerEvent:Connect(function(player, toolType, action)
 	local config = ShopConfig[toolType]
 	if not config then return end
 
 	if action == "buyCount" then
-		-- 金币买次数（原逻辑）
 		local tool = CreatePlayerToolIfNotExist(player, toolType)
 		if not tool then return end
+
 		local moneyValue = player.leaderstats:FindFirstChild("Money")
 		if not moneyValue or moneyValue.Value < config.BuyCountPrice then return end
 
 		moneyValue.Value -= config.BuyCountPrice
+
 		local baseName = string.gsub(toolType, "Tool$", "")
 		local countValue = tool:FindFirstChild(baseName .. "Count") or tool:FindFirstChild("Count")
 		if countValue then countValue.Value += 1 end
 
+		DataManager.SavePlayerTools:Fire(player)
 		RefreshShopEvent:FireClient(player)
 
 	elseif action == "upgrade" then
-		-- 金币升级（原逻辑）
 		local tool = FindPlayerTool(player, toolType)
 		if not tool then return end
 		local baseName = string.gsub(toolType, "Tool$", "")
@@ -84,17 +85,17 @@ BuyItemEvent.OnServerEvent:Connect(function(player, toolType, action)
 
 		moneyValue.Value -= price
 		levelValue.Value = nextLevel
+
+		DataManager.SavePlayerTools:Fire(player)
 		RefreshShopEvent:FireClient(player)
 
 	elseif action == "buyCountRobux" then
-		-- Robux 买次数
 		local productId = config.RobuxBuyCountProductId
 		if productId and productId > 0 then
 			MarketplaceService:PromptProductPurchase(player, productId)
 		end
 
 	elseif action == "upgradeRobux" then
-		-- Robux 升级
 		local productId = config.RobuxUpgradeProductId
 		if productId and productId > 0 then
 			MarketplaceService:PromptProductPurchase(player, productId)
@@ -102,34 +103,34 @@ BuyItemEvent.OnServerEvent:Connect(function(player, toolType, action)
 	end
 end)
 
--- ==================== 支付成功处理（最重要！） ====================
 MarketplaceService.ProcessReceipt = function(receiptInfo)
 	local player = Players:GetPlayerByUserId(receiptInfo.PlayerId)
 	if not player then return Enum.ProductPurchaseDecision.NotProcessedYet end
 
 	local productId = receiptInfo.ProductId
+	local DataManager = game.ServerScriptService:WaitForChild("ToolManager")
 
 	for toolType, config in pairs(ShopConfig) do
 		local baseName = string.gsub(toolType, "Tool$", "")
 
-		-- Robux 买次数
 		if config.RobuxBuyCountProductId == productId then
 			local tool = CreatePlayerToolIfNotExist(player, toolType)
 			if tool then
 				local countValue = tool:FindFirstChild(baseName .. "Count") or tool:FindFirstChild("Count")
 				if countValue then countValue.Value += 1 end
+				DataManager.SavePlayerTools:Fire(player)
 				RefreshShopEvent:FireClient(player)
 			end
 			return Enum.ProductPurchaseDecision.PurchaseGranted
 		end
 
-		-- Robux 升级
 		if config.RobuxUpgradeProductId == productId then
 			local tool = FindPlayerTool(player, toolType)
 			if tool then
 				local levelValue = tool:FindFirstChild(baseName .. "Level") or tool:FindFirstChild("Level")
 				if levelValue and levelValue.Value < config.MaxLevel then
 					levelValue.Value += 1
+					DataManager.SavePlayerTools:Fire(player)
 					RefreshShopEvent:FireClient(player)
 				end
 			end

@@ -1,33 +1,23 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
 
-local ShieldEvent = ReplicatedStorage:FindFirstChild("ShieldEvent")
-if not ShieldEvent then
-	ShieldEvent = Instance.new("RemoteEvent")
-	ShieldEvent.Name = "ShieldEvent"
-	ShieldEvent.Parent = ReplicatedStorage
-end
+local ShieldEvent = ReplicatedStorage:FindFirstChild("ShieldEvent") or Instance.new("RemoteEvent")
+ShieldEvent.Name = "ShieldEvent"
+ShieldEvent.Parent = ReplicatedStorage
+
+local DataManager = game.ServerScriptService:WaitForChild("ToolManager")
 
 local function FindPlayerShieldTool(player)
 	local character = player.Character
 	local backpack = player.Backpack
-
 	if character then
 		for _, tool in ipairs(character:GetChildren()) do
-			if tool:IsA("Tool") and tool:FindFirstChild("ShieldCount") then
-				return tool
-			end
+			if tool:IsA("Tool") and tool:FindFirstChild("ShieldCount") then return tool end
 		end
 	end
-
 	for _, tool in ipairs(backpack:GetChildren()) do
-		if tool:IsA("Tool") and tool:FindFirstChild("ShieldCount") then
-			return tool
-		end
+		if tool:IsA("Tool") and tool:FindFirstChild("ShieldCount") then return tool end
 	end
-
 	return nil
 end
 
@@ -41,46 +31,35 @@ local function OnShield(player)
 
 	ShieldCount.Value = ShieldCount.Value - 1
 
+	DataManager.SavePlayerTools:Fire(player)  -- 使用后立即保存
+
 	local Character = player.Character
 	if not Character then return end
-
 	local Humanoid = Character:FindFirstChild("Humanoid")
 	if not Humanoid then return end
 
-	-- 无敌核心：冻结血条（不扣血、不回血）
-	local originalHealth = Humanoid.Health  -- 记住当前血量
-	local healthConnection
-	healthConnection = Humanoid.HealthChanged:Connect(function(newHealth)
+	local originalHealth = Humanoid.Health
+	local healthConnection = Humanoid.HealthChanged:Connect(function(newHealth)
 		if newHealth < originalHealth then
-			Humanoid.Health = originalHealth  -- 强制不扣血
+			Humanoid.Health = originalHealth
 		end
 	end)
 
-	-- ForceField 防物理/爆炸
 	local ForceField = Instance.new("ForceField")
 	ForceField.Parent = Character
 
-	-- 击飞免疫标记
 	local ShieldActive = Instance.new("BoolValue")
 	ShieldActive.Name = "ShieldActive"
 	ShieldActive.Value = true
 	ShieldActive.Parent = Character
 
-	-- 持续时间
 	local Duration = 3 + 0.5 * (ShieldLevel.Value - 1)
 
-	-- Duration 后清理
-		task.delay(Duration, function()
-        if ForceField and ForceField.Parent then 
-            ForceField:Destroy() 
-        end
-        if ShieldActive and ShieldActive.Parent then 
-            ShieldActive:Destroy() 
-        end
-        if healthConnection then 
-            healthConnection:Disconnect() 
-        end
-    end)
+	task.delay(Duration, function()
+		if ForceField and ForceField.Parent then ForceField:Destroy() end
+		if ShieldActive and ShieldActive.Parent then ShieldActive:Destroy() end
+		if healthConnection then healthConnection:Disconnect() end
+	end)
 end
 
 ShieldEvent.OnServerEvent:Connect(OnShield)

@@ -1,37 +1,140 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- ServerScriptService/ToolManager（合并版）
 local Players = game:GetService("Players")
+local DataStoreService = game:GetService("DataStoreService")
+local ServerStorage = game:GetService("ServerStorage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local RemoveToolEvent = Instance.new("RemoteEvent")
-RemoveToolEvent.Name = "RemoveToolEvent"
-RemoveToolEvent.Parent = ReplicatedStorage
+local playerToolsDataStore = DataStoreService:GetDataStore("PlayerTools")
 
--- 移除指定玩家的指定道具（Backpack + Character）
-local function RemovePlayerTool(player, toolName)
-	-- 移除装备中
-	if player.Character then
-		local equippedTool = player.Character:FindFirstChild(toolName)
-		if equippedTool then
-			equippedTool:Destroy()
-			print(player.Name .. " 装备中的 " .. toolName .. " 已移除")
+local TOOLS_TO_SAVE = {"SlapTool", "ShieldTool"}  -- 以后加新道具只需在这里加名字
+
+local playerToolData = {}
+
+-- ==================== 加载道具 ====================
+local function loadPlayerTools(player)
+	local userId = tostring(player.UserId)
+	local success, savedData = pcall(function()
+		return playerToolsDataStore:GetAsync(userId)
+	end)
+
+	local data = (success and savedData) or {}
+	playerToolData[player] = data
+
+	for _, toolName in ipairs(TOOLS_TO_SAVE) do
+		local info = data[toolName]
+		if info and info.Count and info.Count > 0 then
+			local template = ServerStorage:FindFirstChild(toolName)
+			if template then
+				local tool = template:Clone()
+
+				local baseName = string.gsub(toolName, "Tool$", "")
+				local countVal = tool:FindFirstChild(baseName.."Count") or Instance.new("IntValue")
+				countVal.Name = baseName.."Count"
+				countVal.Value = info.Count
+				countVal.Parent = tool
+
+				local levelVal = tool:FindFirstChild(baseName.."Level") or Instance.new("IntValue")
+				levelVal.Name = baseName.."Level"
+				levelVal.Value = info.Level or 1
+				levelVal.Parent = tool
+
+				tool.Parent = player.Backpack
+			end
 		end
-	end
-
-	-- 移除背包
-	local backpackTool = player.Backpack:FindFirstChild(toolName)
-	if backpackTool then
-		backpackTool:Destroy()
-		print(player.Name .. " 背包中的 " .. toolName .. " 已移除")
 	end
 end
 
-RemoveToolEvent.OnServerEvent:Connect(RemovePlayerTool)
+-- ==================== 保存道具 ====================
+local function savePlayerTools(player)
+	local userId = tostring(player.UserId)
+	local data = {}
 
--- 额外：监听玩家死亡，全清道具（备用，确保不残留）
---Players.PlayerAdded:Connect(function(player)
---	player.CharacterAdded:Connect(function(character)
---		-- 死亡后 1s 清道具（防止残留）
---		task.wait(1)
---		RemovePlayerTool(player, "SlapTool")
---		RemovePlayerTool(player, "ShieldTool")
---	end)
---end)
+	for _, toolName in ipairs(TOOLS_TO_SAVE) do
+		local tool = player.Backpack:FindFirstChild(toolName) or (player.Character and player.Character:FindFirstChild(toolName))
+		if tool then
+			local baseName = string.gsub(toolName, "Tool$", "")
+			local countVal = tool:FindFirstChild(baseName.."Count") or tool:FindFirstChild("Count")
+			local levelVal = tool:FindFirstChild(baseName.."Level") or tool:FindFirstChild("Level")
+
+			local count = countVal and countVal.Value or 0
+			if count > 0 or (levelVal and levelVal.Value > 1) then  -- Count=0时仍保存等级
+				data[toolName] = {
+					Count = count,
+					Level = levelVal and levelVal.Value or 1
+				}
+			end
+		end
+	end
+
+	pcall(function()
+		playerToolsDataStore:SetAsync(userId, data)
+	end)
+end
+
+-- ==================== 公开保存接口 ====================
+local SaveEvent = Instance.new("BindableEvent")
+SaveEvent.Name = "SavePlayerTools"
+SaveEvent.Parent = script
+
+SaveEvent.Event:Connect(function(player)
+	if player then savePlayerTools(player) end
+end)
+
+-- ==================== 拾取道具自动保存（关键！） ====================
+local function onToolAdded(player, tool)
+	if table.find(TOOLS_TO_SAVE, tool.Name) then
+		task.wait(0.1)  -- 等待 Value 加载
+		savePlayerTools(player)
+	end
+end
+
+Players.PlayerAdded:Connect(function(player)
+	player.Backpack.ChildAdded:Connect(function(tool)
+		onToolAdded(player, tool)
+	end)
+	player.CharacterAdded:Connect(function(character)
+		character.ChildAdded:Connect(function(tool)
+			onToolAdded(player, tool)
+		end)
+	end)
+end)
+
+-- ==================== 玩家加入/离开 ====================
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function()
+		task.wait(0.5)
+		loadPlayerTools(player)
+	end)
+	loadPlayerTools(player)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+	savePlayerTools(player)
+	playerToolData[player] = nil
+end)
+
+-- ==================== 每3分钟全服保存 ====================
+task.spawn(function()
+	while true do
+		task.wait(180)
+		for _, p in ipairs(Players:GetPlayers()) do
+			savePlayerTools(p)
+		end
+	end
+end)
+
+-- ==================== RemoveToolEvent ====================
+local RemoveToolEvent = ReplicatedStorage:FindFirstChild("RemoveToolEvent") or Instance.new("RemoteEvent")
+RemoveToolEvent.Name = "RemoveToolEvent"
+RemoveToolEvent.Parent = ReplicatedStorage
+
+local function RemovePlayerTool(player, toolName)
+	if player.Character then
+		local equipped = player.Character:FindFirstChild(toolName)
+		if equipped then equipped:Destroy() end
+	end
+	local backpackTool = player.Backpack:FindFirstChild(toolName)
+	if backpackTool then backpackTool:Destroy() end
+end
+
+RemoveToolEvent.OnServerEvent:Connect(RemovePlayerTool)
