@@ -80,7 +80,7 @@ local function disableDefaultJump()
 		humanoid.JumpHeight = 0
 		-- 禁用自动跳跃
 		humanoid.AutoJumpEnabled = false
-		print("默认跳跃功能已禁用")
+		-- print("默认跳跃功能已禁用")
 	end
 end
 
