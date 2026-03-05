@@ -127,14 +127,19 @@ local function CreateShopUI()
 		itemFrame.Parent = Scrolling
 
 		local tool = player.Backpack:FindFirstChild(toolType) or (player.Character and player.Character:FindFirstChild(toolType))
-		local currentCount = config.BaseCount
+		local currentCount = 0   -- 如果没了，默认0（更合理）
 		local currentLevel = 1
+
 		if tool then
 			local baseName = string.gsub(toolType, "Tool$", "")
 			local c = tool:FindFirstChild(baseName .. "Count") or tool:FindFirstChild("Count")
 			local l = tool:FindFirstChild(baseName .. "Level") or tool:FindFirstChild("Level")
 			if c then currentCount = c.Value end
 			if l then currentLevel = l.Value end
+		else
+			-- === 关键修复：道具没了，从服务器获取历史最高等级 ===
+			local GetSavedToolLevel = ReplicatedStorage:WaitForChild("GetSavedToolLevel")
+			currentLevel = GetSavedToolLevel:InvokeServer(toolType)
 		end
 
 		local mainContainer = Instance.new("Frame")

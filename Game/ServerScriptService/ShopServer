@@ -78,8 +78,10 @@ BuyItemEvent.OnServerEvent:Connect(function(player, toolType, action)
 		RefreshShopEvent:FireClient(player)
 
 	elseif action == "upgrade" then
-		local tool = FindPlayerTool(player, toolType)
+		-- === 关键修复：没有道具也允许升级 ===
+		local tool = CreatePlayerToolIfNotExist(player, toolType)  -- 自动创建并继承最高等级
 		if not tool then return end
+
 		local baseName = string.gsub(toolType, "Tool$", "")
 		local levelValue = tool:FindFirstChild(baseName .. "Level") or tool:FindFirstChild("Level")
 		if not levelValue or levelValue.Value >= config.MaxLevel then return end
@@ -131,7 +133,8 @@ MarketplaceService.ProcessReceipt = function(receiptInfo)
 		end
 
 		if config.RobuxUpgradeProductId == productId then
-			local tool = FindPlayerTool(player, toolType)
+			-- === 关键修复：Robux升级也没有道具也能升 ===
+			local tool = CreatePlayerToolIfNotExist(player, toolType)
 			if tool then
 				local levelValue = tool:FindFirstChild(baseName .. "Level") or tool:FindFirstChild("Level")
 				if levelValue and levelValue.Value < config.MaxLevel then
