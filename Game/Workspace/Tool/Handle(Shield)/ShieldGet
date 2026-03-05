@@ -1,9 +1,12 @@
--- 服务器脚本：护盾掉落物（完全参照SlapGet，改名字）
+-- ShieldGet（地图掉落物脚本 - 已加入自动保存 + 继承最高等级）
 local Players = game:GetService("Players")
 local ServerStorage = game:GetService("ServerStorage")
 
-local TOOL_NAME = "ShieldTool"  -- 护盾道具Name
+local TOOL_NAME = "ShieldTool"
 local ORIGINAL_TOOL = ServerStorage:WaitForChild(TOOL_NAME)
+
+-- === 新增：引用 ToolManager ===
+local DataManager = game.ServerScriptService:WaitForChild("ToolManager")
 
 local function FindExistingShieldTool(player)
 	local backpack = player:FindFirstChild("Backpack")
@@ -23,7 +26,6 @@ local function FindExistingShieldTool(player)
 			return tool
 		end
 	end
-
 	return nil
 end
 
@@ -33,14 +35,34 @@ local function GiveShieldTool(player)
 	if existingTool then
 		local shieldCount = existingTool:FindFirstChild("ShieldCount")
 		if shieldCount then
-			shieldCount.Value = shieldCount.Value + 1
+			shieldCount.Value += 1
 			print(player.Name .. " 护盾次数 +1，现在 x" .. shieldCount.Value)
 		end
 	else
+		-- 首次获得
 		local newTool = ORIGINAL_TOOL:Clone()
 		newTool.Parent = player.Backpack
-		print(player.Name .. " 首次获得护盾道具")
+
+		local baseName = "Shield"
+		local countValue = newTool:FindFirstChild(baseName .. "Count") or Instance.new("IntValue")
+		countValue.Name = baseName .. "Count"
+		countValue.Value = 1
+		countValue.Parent = newTool
+
+		-- 继承历史最高等级
+		local savedInfo = DataManager.GetSavedToolInfo:Invoke(player, TOOL_NAME)
+		local savedLevel = (savedInfo and savedInfo.Level) or 1
+
+		local levelValue = newTool:FindFirstChild(baseName .. "Level") or Instance.new("IntValue")
+		levelValue.Name = baseName .. "Level"
+		levelValue.Value = savedLevel
+		levelValue.Parent = newTool
+
+		print(player.Name .. " 首次获得护盾道具（等级 " .. savedLevel .. "）")
 	end
+
+	-- === 关键：获得后立即保存 ===
+	DataManager.SavePlayerTools:Fire(player)
 end
 
 script.Parent.Touched:Connect(function(hit)

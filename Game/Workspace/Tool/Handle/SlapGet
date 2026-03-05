@@ -1,16 +1,18 @@
--- 实际上这个脚本不能放那边，不然会报错
+-- SlapGet（地图掉落物脚本 - 已加入自动保存 + 继承最高等级）
 local Players = game:GetService("Players")
 local ServerStorage = game:GetService("ServerStorage")
 
 local TOOL_NAME = "SlapTool"
 local ORIGINAL_TOOL = ServerStorage:WaitForChild(TOOL_NAME)
 
+-- === 新增：引用 ToolManager（用来保存和读历史等级）===
+local DataManager = game.ServerScriptService:WaitForChild("ToolManager")
+
 local function FindExistingSlapTool(player)
 	local backpack = player:FindFirstChild("Backpack")
 	local character = player.Character
 	if not backpack then return nil end
 
-	-- 先检查装备中（当前手上拿着的 Tool）
 	if character then
 		for _, tool in ipairs(character:GetChildren()) do
 			if tool:IsA("Tool") and tool:FindFirstChild("SlapCount") then
@@ -19,57 +21,57 @@ local function FindExistingSlapTool(player)
 		end
 	end
 
-	-- 再检查背包
 	for _, tool in ipairs(backpack:GetChildren()) do
 		if tool:IsA("Tool") and tool:FindFirstChild("SlapCount") then
 			return tool
 		end
 	end
-
 	return nil
 end
 
--- 主函数：给玩家巴掌道具（支持叠加）
 local function GiveSlapTool(player)
 	local existingTool = FindExistingSlapTool(player)
 
 	if existingTool then
-		-- 已存在：叠加次数 +1
+		-- 已存在：叠加次数
 		local slapCount = existingTool:FindFirstChild("SlapCount")
 		if slapCount then
-			slapCount.Value = slapCount.Value + 1
+			slapCount.Value += 1
 			print(player.Name .. " 巴掌次数 +1，现在 x" .. slapCount.Value)
 		end
 	else
-		-- 不存在：克隆新道具给玩家
+		-- 不存在：首次获得 → 创建并继承历史最高等级
 		local newTool = ORIGINAL_TOOL:Clone()
 		newTool.Parent = player.Backpack
-		print(player.Name .. " 首次获得巴掌道具")
+
+		local baseName = "Slap"
+		local countValue = newTool:FindFirstChild(baseName .. "Count") or Instance.new("IntValue")
+		countValue.Name = baseName .. "Count"
+		countValue.Value = 1                     -- 首次获得 = 1
+		countValue.Parent = newTool
+
+		-- 读取历史最高等级（和商店完全一致！）
+		local savedInfo = DataManager.GetSavedToolInfo:Invoke(player, TOOL_NAME)
+		local savedLevel = (savedInfo and savedInfo.Level) or 1
+
+		local levelValue = newTool:FindFirstChild(baseName .. "Level") or Instance.new("IntValue")
+		levelValue.Name = baseName .. "Level"
+		levelValue.Value = savedLevel
+		levelValue.Parent = newTool
+
+		print(player.Name .. " 首次获得巴掌道具（等级 " .. savedLevel .. "）")
 	end
+
+	-- === 关键：获得后立即保存（这就是你想要的自动保存）===
+	DataManager.SavePlayerTools:Fire(player)
 end
 
--- 触发方式1：玩家点击某个 Part（比如掉落物）
--- 把这个脚本放进掉落物 Part 里
--- script.Parent.ClickDetector.MouseClick:Connect(function(player)
---	GiveSlapTool(player)
--- end)
-
--- 触发方式2：ProximityPrompt
--- script.Parent.ProximityPrompt.Triggered:Connect(function(player)
---     GiveSlapTool(player)
--- end)
-
---触发方式3：Touch（捡起）
+-- 触发方式（Touch 保持不变）
 script.Parent.Touched:Connect(function(hit)
 	local character = hit.Parent
 	local player = Players:GetPlayerFromCharacter(character)
 	if player then
 		GiveSlapTool(player)
-		script.Parent:Destroy()  -- 捡起后销毁掉落物
+		script.Parent:Destroy()
 	end
 end)
-
--- 触发方式4：商店购买或奖励
--- 某个 RemoteEvent.OnServerEvent:Connect(function(player)
---     GiveSlapTool(player)
--- end)

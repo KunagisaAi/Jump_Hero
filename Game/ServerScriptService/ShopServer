@@ -38,14 +38,20 @@ local function CreatePlayerToolIfNotExist(player, toolType)
 	tool.Parent = player.Backpack
 
 	local baseName = string.gsub(toolType, "Tool$", "")
+
+	-- Count 初始为0（问题1已修复）
 	local countValue = tool:FindFirstChild(baseName .. "Count") or Instance.new("IntValue")
 	countValue.Name = baseName .. "Count"
-	countValue.Value = ShopConfig[toolType].BaseCount   -- 首次购买正确为1
+	countValue.Value = 0
 	countValue.Parent = tool
+
+	-- === 关键修改：读取历史最高等级 ===
+	local savedInfo = DataManager.GetSavedToolInfo:Invoke(player, toolType)
+	local savedLevel = (savedInfo and savedInfo.Level) or 1
 
 	local levelValue = tool:FindFirstChild(baseName .. "Level") or Instance.new("IntValue")
 	levelValue.Name = baseName .. "Level"
-	levelValue.Value = 1
+	levelValue.Value = savedLevel   -- 直接用玩家之前升到的最高等级！
 	levelValue.Parent = tool
 
 	return tool

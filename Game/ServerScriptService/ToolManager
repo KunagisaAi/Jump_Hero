@@ -44,11 +44,19 @@ local function loadPlayerTools(player)
 	end
 end
 
--- ==================== 保存道具 ====================
+-- ==================== 保存道具（已修复最高等级永久记录） ====================
 local function savePlayerTools(player)
 	local userId = tostring(player.UserId)
-	local data = {}
 
+	-- === 关键修复：先复制内存里的旧数据（保留最高等级）===
+	local data = {}
+	if playerToolData[player] then
+		for k, v in pairs(playerToolData[player]) do
+			data[k] = { Count = v.Count, Level = v.Level }
+		end
+	end
+
+	-- === 更新当前背包/角色里的道具数据（数量或等级改变时）===
 	for _, toolName in ipairs(TOOLS_TO_SAVE) do
 		local tool = player.Backpack:FindFirstChild(toolName) or (player.Character and player.Character:FindFirstChild(toolName))
 		if tool then
@@ -57,15 +65,18 @@ local function savePlayerTools(player)
 			local levelVal = tool:FindFirstChild(baseName.."Level") or tool:FindFirstChild("Level")
 
 			local count = countVal and countVal.Value or 0
-			if count > 0 or (levelVal and levelVal.Value > 1) then  -- Count=0时仍保存等级
-				data[toolName] = {
-					Count = count,
-					Level = levelVal and levelVal.Value or 1
-				}
-			end
+			local level = levelVal and levelVal.Value or 1
+
+			data[toolName] = {
+				Count = count,
+				Level = level
+			}
 		end
+		-- 注意：如果当前没有道具，就保留上次的记录（最高等级不会丢失！）
 	end
 
+	-- 更新内存 + 保存到DataStore
+	playerToolData[player] = data
 	pcall(function()
 		playerToolsDataStore:SetAsync(userId, data)
 	end)
@@ -81,23 +92,23 @@ SaveEvent.Event:Connect(function(player)
 end)
 
 -- ==================== 拾取道具自动保存（关键！） ====================
-local function onToolAdded(player, tool)
-	if table.find(TOOLS_TO_SAVE, tool.Name) then
-		task.wait(0.1)  -- 等待 Value 加载
-		savePlayerTools(player)
-	end
-end
+--local function onToolAdded(player, tool)
+--	if table.find(TOOLS_TO_SAVE, tool.Name) then
+--		task.wait(0.1)  -- 等待 Value 加载
+--		savePlayerTools(player)
+--	end
+--end
 
-Players.PlayerAdded:Connect(function(player)
-	player.Backpack.ChildAdded:Connect(function(tool)
-		onToolAdded(player, tool)
-	end)
-	player.CharacterAdded:Connect(function(character)
-		character.ChildAdded:Connect(function(tool)
-			onToolAdded(player, tool)
-		end)
-	end)
-end)
+--Players.PlayerAdded:Connect(function(player)
+--	player.Backpack.ChildAdded:Connect(function(tool)
+--		onToolAdded(player, tool)
+--	end)
+--	player.CharacterAdded:Connect(function(character)
+--		character.ChildAdded:Connect(function(tool)
+--			onToolAdded(player, tool)
+--		end)
+--	end)
+--end)
 
 -- ==================== 玩家加入/离开 ====================
 Players.PlayerAdded:Connect(function(player)
@@ -136,5 +147,18 @@ local function RemovePlayerTool(player, toolName)
 	local backpackTool = player.Backpack:FindFirstChild(toolName)
 	if backpackTool then backpackTool:Destroy() end
 end
+
+-- ==================== 新增：公开读取历史等级 ====================
+local function GetSavedToolInfo(player, toolName)
+	if playerToolData[player] and playerToolData[player][toolName] then
+		return playerToolData[player][toolName]
+	end
+	return nil
+end
+
+local GetToolInfoEvent = Instance.new("BindableFunction")
+GetToolInfoEvent.Name = "GetSavedToolInfo"
+GetToolInfoEvent.Parent = script
+GetToolInfoEvent.OnInvoke = GetSavedToolInfo
 
 RemoveToolEvent.OnServerEvent:Connect(RemovePlayerTool)
