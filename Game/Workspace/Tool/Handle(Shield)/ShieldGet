@@ -36,7 +36,7 @@ local function GiveShieldTool(player)
 		local shieldCount = existingTool:FindFirstChild("ShieldCount")
 		if shieldCount then
 			shieldCount.Value += 1
-			print(player.Name .. " 护盾次数 +1，现在 x" .. shieldCount.Value)
+			-- print(player.Name .. " 护盾次数 +1，现在 x" .. shieldCount.Value)
 		end
 	else
 		-- 首次获得
@@ -58,7 +58,7 @@ local function GiveShieldTool(player)
 		levelValue.Value = savedLevel
 		levelValue.Parent = newTool
 
-		print(player.Name .. " 首次获得护盾道具（等级 " .. savedLevel .. "）")
+		-- print(player.Name .. " 首次获得护盾道具（等级 " .. savedLevel .. "）")
 	end
 
 	-- === 关键：获得后立即保存 ===

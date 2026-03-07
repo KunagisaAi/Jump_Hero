@@ -187,7 +187,7 @@ local function CreateShopUI()
 		countLabel.Size = UDim2.new(1, 0, 0.15, 0)
 		countLabel.Position = UDim2.new(0, 0, 0.88, 0)
 		countLabel.BackgroundTransparency = 1
-		countLabel.Text = "次数: " .. currentCount
+		countLabel.Text = "amount: " .. currentCount
 		countLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
 		countLabel.Font = Enum.Font.Gotham
 		countLabel.TextSize = getScaledTextSize(20)
@@ -210,31 +210,31 @@ local function CreateShopUI()
 		grid.Parent = rightFrame
 
 		-- 四个按钮
-		createButton("金币 +1次数\n" .. config.BuyCountPrice .. " 金币", Color3.fromRGB(0, 170, 80), rightFrame, function()
+		createButton("Coin +1 amount\n" .. config.BuyCountPrice .. " Coin", Color3.fromRGB(0, 170, 80), rightFrame, function()
 			BuyItemEvent:FireServer(toolType, "buyCount")
 		end)
 
 		if currentLevel < config.MaxLevel then
 			local nextPrice = config.Levels[currentLevel + 1].UpgradePrice
-			createButton("金币升级 Lv." .. (currentLevel+1) .. "\n" .. nextPrice .. " 金币", Color3.fromRGB(255, 140, 0), rightFrame, function()
+			createButton("Coin upgrade Lv." .. (currentLevel+1) .. "\n" .. nextPrice .. " Coin", Color3.fromRGB(255, 140, 0), rightFrame, function()
 				BuyItemEvent:FireServer(toolType, "upgrade")
 			end)
 		else
-			createButton("已满级", Color3.fromRGB(80,80,80), rightFrame, nil)
+			createButton("Max level", Color3.fromRGB(80,80,80), rightFrame, nil)
 		end
 
 		local robuxCountPrice = config.RobuxBuyCountPrice or 20
-		createButton("Robux +1次数\n" .. robuxCountPrice .. " Robux", Color3.fromRGB(0, 120, 215), rightFrame, function()
+		createButton("Robux +1 amount\n" .. robuxCountPrice .. " Robux", Color3.fromRGB(0, 120, 215), rightFrame, function()
 			BuyItemEvent:FireServer(toolType, "buyCountRobux")
 		end)
 
 		if currentLevel < config.MaxLevel then
 			local nextRPrice = config.Levels[currentLevel + 1].RobuxUpgradePrice or 50
-			createButton("Robux升级 Lv." .. (currentLevel+1) .. "\n" .. nextRPrice .. " Robux", Color3.fromRGB(0, 162, 255), rightFrame, function()
+			createButton("Robux upgrade Lv." .. (currentLevel+1) .. "\n" .. nextRPrice .. " Robux", Color3.fromRGB(0, 162, 255), rightFrame, function()
 				BuyItemEvent:FireServer(toolType, "upgradeRobux")
 			end)
 		else
-			createButton("已满级", Color3.fromRGB(80,80,80), rightFrame, nil)
+			createButton("Max level", Color3.fromRGB(80,80,80), rightFrame, nil)
 		end
 	end
 end

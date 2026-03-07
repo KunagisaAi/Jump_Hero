@@ -37,7 +37,7 @@ local function GiveSlapTool(player)
 		local slapCount = existingTool:FindFirstChild("SlapCount")
 		if slapCount then
 			slapCount.Value += 1
-			print(player.Name .. " 巴掌次数 +1，现在 x" .. slapCount.Value)
+			-- print(player.Name .. " 巴掌次数 +1，现在 x" .. slapCount.Value)
 		end
 	else
 		-- 不存在：首次获得 → 创建并继承历史最高等级
@@ -59,7 +59,7 @@ local function GiveSlapTool(player)
 		levelValue.Value = savedLevel
 		levelValue.Parent = newTool
 
-		print(player.Name .. " 首次获得巴掌道具（等级 " .. savedLevel .. "）")
+		-- print(player.Name .. " 首次获得巴掌道具（等级 " .. savedLevel .. "）")
 	end
 
 	-- === 关键：获得后立即保存（这就是你想要的自动保存）===
